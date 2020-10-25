@@ -17,6 +17,7 @@ use yii\console\Response;
 use yii\db\ActiveRecord;
 use yii\db\Query;
 use yii\rest\ActiveController;
+use yii\web\HttpException;
 
 /**
  * Class TerminalController
@@ -61,14 +62,13 @@ class TerminalController extends ActiveController
      */
     public function actions(): array
     {
-        $actions = parent::actions();
-        unset($actions['index'], $actions['view'], $actions['create'], $actions['update'], $actions['delete']);
-        return $actions;
+        return [];
     }
 
     /**
      * Clock in given user
-     * @return array|bool|string|DynamicModel
+     * @return bool
+     * @throws HttpException
      * @throws InvalidConfigException
      */
     public function actionIn()
@@ -77,14 +77,14 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            return $params;
+            throw new HttpException(422, $params);
         }
 
         $clock = new Clock();
         $now = Clock::roundToFullMinute((int)Yii::$app->formatter->asTimestamp('now'));
 
         if (Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->exists()) {
-            return 'session has already been started';
+            throw new HttpException(422, 'User not clocked in');
         }
 
         $clock->clock_in = $now;
@@ -92,7 +92,7 @@ class TerminalController extends ActiveController
         $clock->user_id = $params['user_id'];
 
         if (!$clock->validate()) {
-            return $clock->errors;
+            throw new HttpException(422, $clock->errors);
         }
 
         return $clock->save(false);
@@ -100,7 +100,8 @@ class TerminalController extends ActiveController
 
     /**
      * Clock out given user
-     * @return array|bool|string|DynamicModel
+     * @return bool
+     * @throws HttpException
      * @throws InvalidConfigException
      */
     public function actionOut()
@@ -109,19 +110,19 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            return $params;
+            throw new HttpException(422, $params);
         }
 
         if (!Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->exists()) {
-            return 'could not find session';
+            throw new HttpException(422, 'Could not find running session');
         }
         $clock = Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->one();
         $clock->clock_out = Clock::roundToFullMinute((int)Yii::$app->formatter->asTimestamp('now'));
         if (!$clock->validate()) {
-            return $clock->errors;
+            throw new HttpException(422, $clock->errors);
         }
         if ($clock->isAnotherSessionSaved()) {
-            return 'can not end current session because it overlaps with another ended session';
+            throw new HttpException(422, 'Can not end current session because it overlaps with another ended session');
         }
 
         return $clock->save(false);
@@ -236,7 +237,8 @@ class TerminalController extends ActiveController
 
     /**
      * Returns image for given user
-     * @return string|DynamicModel|Response
+     * @return Response|\yii\web\Response
+     * @throws HttpException
      * @throws InvalidConfigException
      */
     public function actionImage()
@@ -245,14 +247,14 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            return $params;
+            throw new HttpException(422, $params);
         }
 
         $user = User::findOne(['id' => $params['user_id']]);
         if (empty($user)) {
-            return 'could not find user';
+            throw new HttpException(422, 'Could not find user');
         } elseif (!$user->image) {
-            return 'user has no image';
+            throw new HttpException(422, 'User has no image');
         }
 
         return Yii::$app->response->sendFile(Yii::$app->params['uploadPath'] . $user->image);

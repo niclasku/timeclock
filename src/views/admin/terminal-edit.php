@@ -15,16 +15,16 @@ $this->title = Yii::t('app', 'Adding Terminal Data');
 
 $this->registerJs(<<<JS
     $(document).ready(function() { 
-        document.getElementById('terminalform-delete').onclick = function() {
-                var box = document.querySelector('input[name="TerminalForm[delete]"]:checked');
+        $('#terminalform-delete').click(function() {
+                var box = $('input:radio[name="TerminalForm[delete]"]:checked');
                 if (box) {
-                    if (box.value === '1') {
-                        document.getElementsByClassName('field-terminalform-imagefile')[0].style.display = 'none';
+                    if (box.val() === '1') {
+                        $('.field-terminalform-imagefile').hide();
                     } else {
-                        document.getElementsByClassName('field-terminalform-imagefile')[0].style.display = 'block';
+                        $('.field-terminalform-imagefile').show();
                     }
                 }
-        }
+        });
     });
 JS
 );

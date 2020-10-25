@@ -55,7 +55,7 @@ class TerminalController extends Controller
         if (empty($account)) {
             $this->stdout("Can not find terminal account of given ID.\n");
             return ExitCode::SOFTWARE;
-        } elseif ($account->delete() == false) {
+        } elseif ($account->delete() === false) {
             Yii::error($account->errors);
             $this->stdout("Error while deleting terminal account.\n");
             return ExitCode::SOFTWARE;
