@@ -1,5 +1,6 @@
 <?php
 
+use app\models\Off;
 use app\models\OffForm;
 use app\widgets\date\DatePicker;
 use app\widgets\fontawesome\FA;
@@ -51,18 +52,16 @@ $this->title = Yii::t('app', 'Adding Off-Time');
                 </div>
             </div>
 
-            <?= $form
-                ->field(
-                    $model,
-                    'type',
-                    ['checkTemplate' => "<div class=\"custom-control custom-checkbox\">\n{input}\n{label}\n{error}\n{hint}\n</div>"]
-                )
-                ->checkbox(['class' => 'custom-control-input'])
-                ->label(
-                    Yii::t('app', 'Vacation'),
-                    ['class' => 'custom-control-label']
-                )
-                ->hint(Yii::t('app', 'If you mark it as vacation administrator will get new notification and will have to approve it to make it official.')) ?>
+            <?php
+                $types = [];
+                foreach (Off::TYPES as $type) {
+                    $types[$type] = Off::names()[$type];
+                }
+            ?>
+
+            <?= $form->field($model, 'type')->radioList($types)
+                ->hint(Yii::t('app', 'Some off-times have to be approved by an administrator after submission. You and the administrators are going to receive email notifications about it.'))
+            ?>
 
             <?= $form->field($model, 'note')->textarea() ?>
 

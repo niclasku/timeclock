@@ -2,6 +2,7 @@
 
 use app\api\Api;
 use app\base\Alert;
+use app\models\Off;
 use app\models\User;
 use yii\caching\FileCache;
 use yii\debug\Module;
@@ -98,6 +99,8 @@ $config = [
         'adminOffTimeEdit' => false,
         'adminOffTimeDelete' => false,
         'showAllVacations' => false,
+        'approvableOffTime' => [Off::TYPE_SICK, Off::TYPE_VACATION],
+        'weekendDays' => [7],
     ],
 ];
 

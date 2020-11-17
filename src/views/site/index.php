@@ -228,11 +228,11 @@ $now = time();
                     <li class="list-group-item">
                         <?php if ($nextVacation->approved === 0): ?>
                             <span class="badge badge-danger float-sm-right d-block d-sm-inline mb-2 ml-0 ml-sm-3">
-                                <?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'vacation awaits approval') ?>
+                                <?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'awaits approval') ?>
                             </span>
                         <?php elseif ($nextVacation->approved === 1): ?>
                             <span class="badge badge-success float-sm-right d-block d-sm-inline mb-2 ml-0 ml-sm-3">
-                                <?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'vacation approved') ?>
+                                <?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'approved') ?>
                             </span>
                         <?php endif; ?>
                         <?= Yii::$app->formatter->asDate($nextVacation->start_at) ?>

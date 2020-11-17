@@ -70,18 +70,16 @@ foreach ($clock as $session) {
 <ul class="list-group mb-3">
     <?php foreach ($off as $offDay): ?>
         <li class="list-group-item <?= $employee === $offDay->user_id ? 'active' : '' ?>">
-            <?php if ($offDay->type === Off::TYPE_VACATION): ?>
+            <?php if (in_array($offDay->type, Yii::$app->params['approvableOffTime'])): ?>
                 <?php if ($offDay->approved === 0): ?>
-                    <span class="badge badge-danger float-right"><?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'VACATION NOT APPROVED YET') ?></span>
+                    <span class="badge badge-danger float-right"><?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'NOT APPROVED YET') ?></span>
                 <?php elseif ($offDay->approved === 1): ?>
-                    <span class="badge badge-success float-right"><?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'Vacation approved') ?></span>
+                    <span class="badge badge-success float-right"><?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'approved') ?></span>
                 <?php else: ?>
-                    <span class="badge badge-secondary float-right"><?= FA::icon('thumbs-down') ?> <?= Yii::t('app', 'Vacation denied') ?></span>
+                    <span class="badge badge-secondary float-right"><?= FA::icon('thumbs-down') ?> <?= Yii::t('app', 'denied') ?></span>
                 <?php endif; ?>
-                <?= FA::icon('plane') ?>
-            <?php else: ?>
-                <?= FA::icon('slash') ?>
             <?php endif; ?>
+            <?= FA::icon(Off::icons()[$offDay->type]) ?>
             <?= Html::encode($users[$offDay->user_id]->name) ?>
             <?= Yii::$app->formatter->asDate($offDay->start_at) ?>
             <?= FA::icon('long-arrow-alt-right') ?>

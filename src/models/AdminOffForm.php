@@ -35,13 +35,59 @@ class AdminOffForm extends OffForm
     {
         return [
             [['startDate', 'endDate', 'type'], 'required'],
-            [['type'], 'in', 'range' => [Off::TYPE_SHORT, Off::TYPE_VACATION]],
+            [['type'], 'in', 'range' => Off::TYPES],
             [['endDate', 'startDate'], 'date', 'format' => 'yyyy-MM-dd'],
             [['startDate'], 'verifyStart'],
             [['endDate'], 'verifyEnd'],
             [['note'], 'string'],
             [['userId'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function verifyStart(): void
+    {
+        $conditions = [
+            'and',
+            ['user_id' => $this->userId],
+            ['<=', 'start_at', $this->startDate],
+            ['>=', 'end_at', $this->startDate],
+        ];
+
+        if ($this->_off->id !== null) {
+            $conditions[] = ['<>', 'id', $this->_off->id];
+        }
+
+        if (Off::find()->where($conditions)->exists()) {
+            $this->addError('startDate', Yii::t('app', 'Selected day overlaps another off-time.'));
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function verifyEnd(): void
+    {
+        if (Yii::$app->formatter->asTimestamp($this->startDate) > Yii::$app->formatter->asTimestamp($this->endDate)) {
+            $this->addError('endDate', Yii::t('app', 'Off-time ending day can not be earlier than starting day.'));
+        } else {
+            $conditions = [
+                'and',
+                ['user_id' => $this->userId],
+                ['<=', 'start_at', $this->endDate],
+                ['>=', 'end_at', $this->startDate],
+            ];
+
+            if ($this->_off->id !== null) {
+                $conditions[] = ['<>', 'id', $this->_off->id];
+            }
+
+            if (Off::find()->where($conditions)->exists()) {
+                $this->addError('endDate', Yii::t('app', 'Selected day overlaps another off-time.'));
+            }
+        }
     }
 
     /**
@@ -53,7 +99,7 @@ class AdminOffForm extends OffForm
             'startDate' => Yii::t('app', 'Start Day'),
             'endDate' => Yii::t('app', 'End Day'),
             'note' => Yii::t('app', 'Note'),
-            'type' => Yii::t('app', 'Vacation'),
+            'type' => Yii::t('app', 'Reason'),
             'userId' => Yii::t('app', 'Name'),
         ];
     }
@@ -84,9 +130,8 @@ class AdminOffForm extends OffForm
 
         $sendInfo = false;
 
-        if ((int)$this->type === Off::TYPE_VACATION
-            && (
-                $originalType !== Off::TYPE_VACATION
+        if (in_array((int)$this->type, Yii::$app->params['approvableOffTime'])
+            && (!in_array($originalType, Yii::$app->params['approvableOffTime'])
                 || ($originalStart !== $this->startDate || $originalEnd !== $this->endDate)
             )) {
             $this->_off->approved = 0;

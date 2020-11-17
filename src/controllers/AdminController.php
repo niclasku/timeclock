@@ -1116,16 +1116,16 @@ class AdminController extends BaseController
 
         if ($off === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
-        } elseif ($off->type !== Off::TYPE_VACATION) {
-            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not a vacation.'));
+        } elseif (!in_array($off->type, Yii::$app->params['approvableOffTime'])) {
+            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not approvable.'));
         } else {
             $previous = $off->approved;
             $off->approved = 1;
 
             if (!$off->save(false, ['approved', 'updated_at'])) {
-                Yii::$app->alert->danger(Yii::t('app', 'There was an error while approving vacation.'));
+                Yii::$app->alert->danger(Yii::t('app', 'There was an error while approving off-time.'));
             } else {
-                Yii::$app->alert->success(Yii::t('app', 'Vacation has been approved.'));
+                Yii::$app->alert->success(Yii::t('app', 'Off-time has been approved.'));
 
                 if ($previous !== $off->approved) {
                     Off::sendInfoToApplicant($off);
@@ -1146,16 +1146,16 @@ class AdminController extends BaseController
 
         if ($off === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
-        } elseif ($off->type !== Off::TYPE_VACATION) {
-            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not a vacation.'));
+        } elseif (!in_array($off->type, Yii::$app->params['approvableOffTime'])) {
+            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not approvable.'));
         } else {
             $previous = $off->approved;
             $off->approved = 2;
 
             if (!$off->save(false, ['approved', 'updated_at'])) {
-                Yii::$app->alert->danger(Yii::t('app', 'There was an error while denying vacation.'));
+                Yii::$app->alert->danger(Yii::t('app', 'There was an error while denying off-time.'));
             } else {
-                Yii::$app->alert->success(Yii::t('app', 'Vacation has been denied.'));
+                Yii::$app->alert->success(Yii::t('app', 'Off-time has been denied.'));
 
                 if ($previous !== $off->approved) {
                     Off::sendInfoToApplicant($off);

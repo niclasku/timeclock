@@ -36,6 +36,7 @@ Simple work time clocking service built on [Yii 2 framework](https://www.yiifram
     - `params > adminOffTimeAdd` (default `false`; allows admins to add off-time)
     - `params > adminOffTimeEdit` (default `false`; allows admins to edit every off-time)
     - `params > adminOffTimeDelete` (default `false`; allows admins to delete every off-time)
+
 5. Change `/public/index.php` file to set `YII_DEBUG` mode to `false` and `YII_ENV` environment to `prod`.
 6. Apply migrations by running in console `php yii migrate`.
 7. Start webserver and register first account.

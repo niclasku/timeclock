@@ -69,7 +69,7 @@ class OffForm extends Model
     {
         return [
             [['startDate', 'endDate', 'type'], 'required'],
-            [['type'], 'in', 'range' => [Off::TYPE_SHORT, Off::TYPE_VACATION]],
+            [['type'], 'in', 'range' => Off::TYPES],
             [['endDate', 'startDate'], 'date', 'format' => 'yyyy-MM-dd'],
             [['startDate'], 'verifyStart'],
             [['endDate'], 'verifyEnd'],
@@ -132,7 +132,7 @@ class OffForm extends Model
             'startDate' => Yii::t('app', 'Start Day'),
             'endDate' => Yii::t('app', 'End Day'),
             'note' => Yii::t('app', 'Note'),
-            'type' => Yii::t('app', 'Vacation'),
+            'type' => Yii::t('app', 'Reason'),
         ];
     }
 
@@ -161,9 +161,8 @@ class OffForm extends Model
 
         $sendInfo = false;
 
-        if ((int)$this->type === Off::TYPE_VACATION
-            && (
-                $originalType !== Off::TYPE_VACATION
+        if (in_array((int)$this->type, Yii::$app->params['approvableOffTime'])
+            && (!in_array($originalType, Yii::$app->params['approvableOffTime'])
                 || ($originalStart !== $this->startDate || $originalEnd !== $this->endDate)
             )) {
             $this->_off->approved = 0;

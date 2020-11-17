@@ -200,24 +200,22 @@ JS
             <ul class="list-group">
                 <?php foreach ($off as $day): ?>
                     <li class="list-group-item">
-                        <?php if ($day->type === Off::TYPE_VACATION): ?>
+                        <?php if (in_array($day->type, Yii::$app->params['approvableOffTime'])): ?>
                             <?php if ($day->approved === 0): ?>
                                 <span class="badge badge-danger float-sm-right d-block d-sm-inline mb-2 ml-0 ml-sm-3">
-                                    <?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'vacation awaits approval') ?>
+                                    <?= FA::icon('exclamation-triangle') ?> <?= Yii::t('app', 'awaits approval') ?>
                                 </span>
                             <?php elseif ($day->approved === 1): ?>
                                 <span class="badge badge-success float-sm-right d-block d-sm-inline mb-2 ml-0 ml-sm-3">
-                                    <?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'vacation approved') ?>
+                                    <?= FA::icon('thumbs-up') ?> <?= Yii::t('app', 'approved') ?>
                                 </span>
                             <?php else: ?>
                                 <span class="badge badge-secondary float-sm-right d-block d-sm-inline mb-2 ml-0 ml-sm-3">
-                                    <?= FA::icon('thumbs-down') ?> <?= Yii::t('app', 'vacation denied') ?>
+                                    <?= FA::icon('thumbs-down') ?> <?= Yii::t('app', 'denied') ?>
                                 </span>
                             <?php endif; ?>
-                            <?= FA::icon('plane') ?>
-                        <?php else: ?>
-                            <?= FA::icon('slash') ?>
                         <?php endif; ?>
+                        <?= FA::icon(Off::icons()[$day->type]) ?>
                         <?= Yii::$app->formatter->asDate($day->start_at) ?>
                         <?= FA::icon('long-arrow-alt-right') ?>
                         <?= Yii::$app->formatter->asDate($day->end_at) ?>
