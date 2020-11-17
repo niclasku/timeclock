@@ -1033,10 +1033,16 @@ class AdminController extends BaseController
      * @param string|int|null $month
      * @param string|int|null $year
      * @param string|int|null $id
+     * @param bool|int $wholeYear
      * @return string|Response
      */
-    public function actionOff($month = null, $year = null, $id = null)
+    public function actionOff($month = null, $year = null, $id = null, $wholeYear = null)
     {
+        if ($wholeYear === null && $year === null && Yii::$app->params['showAllVacations']) {
+            // first visit
+            $wholeYear = true;
+        }
+
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
 
         $user = null;
@@ -1054,11 +1060,19 @@ class AdminController extends BaseController
             ->orderBy(['name' => SORT_ASC])
             ->all();
 
-        $conditions = [
-            'and',
-            ['<', 'start_at', $nextYear . '-' . ($nextMonth < 10 ? '0' : '') . $nextMonth . '-01'],
-            ['>=', 'end_at', $year . '-' . ($month < 10 ? '0' : '') . $month . '-01'],
-        ];
+        if ($wholeYear == true) {
+            $conditions = [
+                'and',
+                ['<', 'start_at', $year + 1 . '-01-01'],
+                ['>=', 'end_at', $year . '-01-01'],
+            ];
+        } else {
+            $conditions = [
+                'and',
+                ['<', 'start_at', $nextYear . '-' . ($nextMonth < 10 ? '0' : '') . $nextMonth . '-01'],
+                ['>=', 'end_at', $year . '-' . ($month < 10 ? '0' : '') . $month . '-01'],
+            ];
+        }
 
         if ($user !== null) {
             $conditions[] = ['user_id' => $user->id];
@@ -1086,6 +1100,7 @@ class AdminController extends BaseController
                 'nextMonth' => $nextMonth,
                 'employee' => $user,
                 'users' => $users,
+                'wholeYear' => $wholeYear,
                 'off' => $off,
             ]
         );

@@ -97,6 +97,7 @@ $config = [
         'adminOffTimeAdd' => false,
         'adminOffTimeEdit' => false,
         'adminOffTimeDelete' => false,
+        'showAllVacations' => false,
     ],
 ];
 

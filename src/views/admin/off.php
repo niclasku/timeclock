@@ -24,6 +24,7 @@ use yii\helpers\Url;
  * @var $next string
  * @var $day Off
  * @var $off array
+ * @var $wholeYear bool
  */
 
 $this->title = Yii::t('app', 'Off-Time');
@@ -108,6 +109,14 @@ $list = '';
     </div>
     <div class="col-lg-9">
         <div class="form-group">
+            <?php if ($wholeYear == false): ?>
+                <a href="<?= $employee !== null ?
+                    Url::to(['off', 'id' => $employee->id, 'wholeYear' => true, 'year' => $year]) :
+                    Url::to(['off', 'wholeYear' => true, 'year' => $year])?>"
+                    class="btn btn-outline-success btn-sm float-right ml-3">
+                    <?= FA::icon('calendar-alt') ?> <?= Yii::t('app', 'Year View') ?>
+                </a>
+            <?php endif; ?>
             <?php if ($employee !== null): ?>
                 <a href="<?= Url::to(['off', 'month' => $month, 'year' => $year]) ?>" class="btn btn-success btn-sm float-right ml-1">
                     <?= FA::icon('users') ?> <?= Yii::t('app', 'All Employees') ?>
@@ -119,7 +128,12 @@ $list = '';
                     <?= FA::icon('plus') ?> <?= Yii::t('app', 'Add Off-Time') ?>
                 </a>
             <?php endif; ?>
-            <?= $months[$month] ?> <?= $year ?>
+            <?php if ($wholeYear == false): ?>
+                <?= $months[$month] ?>
+            <?php else: ?>
+                <?= Yii::t('app', 'Year') ?>
+            <?php endif; ?>
+            <?= $year ?>
         </div>
 
         <div class="form-group">

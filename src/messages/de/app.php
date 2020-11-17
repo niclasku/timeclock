@@ -347,4 +347,5 @@ return [
     '{n,plural,one{# day} other{# days}}' => '{n,plural,one{# Tag} other{# Tage}}',
     '{n,plural,one{# session} other{# sessions}}' => '{n,plural,one{# Sitzung} other{# Sitzungen}}',
     '{timestamp} is integer with number of seconds since the beginning of Unix Epoch on January 1st, 1970 at UTC. You must provide current timestamp like for example now - {now}. API will reject all requests older or younger by 1 minute from current time.' => 'Der {timestamp} ist eine Integerzahl mit der Anzahl der Sekunden seit Beginn der Unix Epoche am 01.01.1970 UTC. Beispiel: {now}. Die API lehnt alle Anfragen, die älter als eine Minute sind ab.',
+    'Year View' => 'Gesamtes Jahr'
 ];
