@@ -9,8 +9,8 @@ return [
     'vendorPath' => dirname(__DIR__) . '/../vendor',
     'runtimePath' => dirname(__DIR__) . '/../runtime',
     'bootstrap' => ['log'],
-    'timeZone' => 'Europe/Warsaw',
-    'language' => 'pl',
+    'timeZone' => 'UTC',
+    'language' => 'en-US',
     'controllerNamespace' => 'app\\commands',
     'components' => [
         'cache' => [
