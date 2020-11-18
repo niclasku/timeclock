@@ -125,6 +125,12 @@ $this->beginPage(); ?>
                                     ) ?></a>
                             </li>
                             <li class="list-inline-item">
+                                <a href="<?= Url::to(['admin/vacations']) ?>"><?= FA::icon('sun') ?> <?= Yii::t(
+                                        'app',
+                                        'Vacation'
+                                    ) ?></a>
+                            </li>
+                            <li class="list-inline-item">
                                 <a href="<?= Url::to(['admin/calendar']) ?>"><?= FA::icon('calendar-alt') ?> <?= Yii::t(
                                         'app',
                                         'Overall Calendar'

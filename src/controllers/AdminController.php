@@ -98,6 +98,7 @@ class AdminController extends BaseController
                 'off',
                 'calendar',
                 'overview',
+                'vacations',
             ]
         );
     }
@@ -262,6 +263,72 @@ class AdminController extends BaseController
                 'days' => $days,
                 'employee' => $user,
                 'users' => $users,
+            ]
+        );
+    }
+
+    /**
+     * @param string|int|null $year
+     * @return string
+     */
+    public function actionVacations($year = null): string
+    {
+        [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
+        $vacations = [];
+        foreach (range(1, 12) as $month) {
+            $range = Clock::getDatePeriod($year, $month);
+            $employees = [];
+            foreach (User::find()->all() as $user) {
+                $employee = [];
+                $employee['name'] = $user->name;
+                foreach ($range as $date) {
+                    $today = $date->format("Y-m-d");
+                    // get off-time for this day
+                    $offConditions = [
+                        'and',
+                        ['>=', 'end_at', $today],
+                        ['<=', 'start_at', $today],
+                        ['user_id' => $user->id],
+                    ];
+                    $offDay = Off::find()
+                        ->joinWith(['user' => static function (ActiveQuery $query) {
+                            $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                        }], false)
+                        ->where($offConditions)->one();
+
+                    // get holidays
+                    $holidayDay = Holiday::find()->where(
+                        [
+                            'month' => $month,
+                            'year' => $year,
+                            'day' => $date->format("d"),
+                        ]
+                    )->one();
+
+                    // join data
+                    $value['off'] = false;
+                    $value['holiday'] = false;
+                    if ($offDay) {
+                        $value['off'] = $offDay;
+                    }
+                    if ($holidayDay) {
+                        $value['holiday'] = 1;
+                    }
+                    if (in_array((int)$date->format('N'), Yii::$app->params['weekendDays'])) {
+                        $value['holiday'] = 2;
+                    }
+                    $employee['day'][] = $value;
+                }
+                $employees[] = $employee;
+            }
+            $vacations[] = ['range' => $range, 'employees' => $employees];
+        }
+
+        return $this->render(
+            'vacations',
+            [
+                'vacations' => $vacations,
+                'year' => $year,
             ]
         );
     }
