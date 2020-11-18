@@ -170,15 +170,6 @@ class AdminController extends BaseController
         );
     }
 
-    private function getDatePeriod($year, $month)
-    {
-        $begin = new DateTime( $year . '-' . $month .'-01' );
-        $end = new DateTime( $year . '-' . $month .'-01' );
-        $end = $end->modify( '+1 month' );
-        $interval = new DateInterval('P1D');
-        return new DatePeriod($begin, $interval, $end);
-    }
-
     /**
      * @param null $month
      * @param null $year
@@ -200,7 +191,7 @@ class AdminController extends BaseController
             Yii::$app->alert->danger(Yii::t('app', 'Can not find user of given ID.'));
         }
 
-        $range = $this->getDatePeriod($year, $month);
+        $range = Clock::getDatePeriod($year, $month);
         $days = [];
         foreach($range as $date){
             $today = $date->format("Y-m-d");

@@ -75,6 +75,12 @@ $this->beginPage(); ?>
                                 ) ?></a>
                         </li>
                         <li class="list-inline-item">
+                            <a href="<?= Url::to(['clock/vacations']) ?>"><?= FA::icon('sun') ?> <?= Yii::t(
+                                    'app',
+                                    'Vacation'
+                                ) ?></a>
+                        </li>
+                        <li class="list-inline-item">
                             <a href="<?= Url::to(['clock/projects']) ?>"><?= FA::icon('umbrella') ?> <?= Yii::t(
                                     'app',
                                     'Projects'
