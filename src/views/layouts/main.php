@@ -90,6 +90,12 @@ $this->beginPage(); ?>
                         <div class="clearfix"></div>
                         <ul class="float-right list-inline menu-admin">
                             <li class="list-inline-item">
+                                <a href="<?= Url::to(['admin/overview']) ?>"><?= FA::icon('receipt') ?> <?= Yii::t(
+                                        'app',
+                                        'Overview'
+                                    ) ?></a>
+                            </li>
+                            <li class="list-inline-item">
                                 <a href="<?= Url::to(['admin/index']) ?>"><?= FA::icon('users') ?> <?= Yii::t(
                                         'app',
                                         'Employees'

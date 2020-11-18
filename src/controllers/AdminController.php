@@ -12,6 +12,8 @@ use app\models\Holiday;
 use app\models\Off;
 use app\models\Project;
 use app\models\User;
+use DateInterval;
+use DatePeriod;
 use DateTime;
 use DateTimeZone;
 use Exception;
@@ -95,6 +97,7 @@ class AdminController extends BaseController
                 'history',
                 'off',
                 'calendar',
+                'overview',
             ]
         );
     }
@@ -162,6 +165,111 @@ class AdminController extends BaseController
         return $this->render(
             'index',
             [
+                'users' => $users,
+            ]
+        );
+    }
+
+    private function getDatePeriod($year, $month)
+    {
+        $begin = new DateTime( $year . '-' . $month .'-01' );
+        $end = new DateTime( $year . '-' . $month .'-01' );
+        $end = $end->modify( '+1 month' );
+        $interval = new DateInterval('P1D');
+        return new DatePeriod($begin, $interval, $end);
+    }
+
+    /**
+     * @param null $month
+     * @param null $year
+     * @param null $id
+     * @return string|Response
+     */
+    public function actionOverview($month = null, $year = null, $id = null)
+    {
+        [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
+
+        $user = null;
+        if (empty($id)) {
+            $id = 1;
+        }
+
+        $user = User::find()->where(['id' => $id, 'status' => User::STATUS_ACTIVE])->one();
+
+        if ($user === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find user of given ID.'));
+        }
+
+        $range = $this->getDatePeriod($year, $month);
+        $days = [];
+        foreach($range as $date){
+            $today = $date->format("Y-m-d");
+            $tomorrow = (clone $date)->modify('+1 day')->format("Y-m-d");
+
+            // get off-time for this day
+            $offConditions = [
+                'and',
+                ['>=', 'end_at', $today],
+                ['<=', 'start_at', $today],
+                ['user_id' => $user->id],
+            ];
+            $offDay = Off::find()
+                ->joinWith(['user' => static function (ActiveQuery $query) {
+                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                }], false)
+                ->where($offConditions)->all();
+
+            // get clock in/out for this day
+            $clockConditions = [
+                'and',
+                ['<', 'clock_out', (int)Yii::$app->formatter->asTimestamp($tomorrow. ' 00:00:00')],
+                ['>=', 'clock_in', (int)Yii::$app->formatter->asTimestamp($today. ' 00:00:00')],
+                ['user_id' => $user->id],
+            ];
+            $clockDay = Clock::find()
+                ->joinWith(['user' => static function (ActiveQuery $query) {
+                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                }], false)
+                ->where($clockConditions)->orderBy(['clock_in' => SORT_ASC])->all();
+
+            // get holidays
+            $holidays = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
+
+            // join data
+            $value = [];
+            $value['date'] = $date;
+            foreach ($offDay as $item) {
+                $value['off'][] = $item;
+            }
+            foreach ($clockDay as $item) {
+                $value['clock'][] = $item;
+            }
+            foreach ($holidays as $item) {
+                $value['holiday'][] = $item;
+            }
+            $days[] = $value;
+        }
+
+        $users = User::find()
+            ->where(['status' => User::STATUS_ACTIVE])
+            ->indexBy('id')
+            ->orderBy(['name' => SORT_ASC])
+            ->all();
+
+        return $this->render(
+            'overview',
+            [
+                'months' => Clock::months(),
+                'year' => $year,
+                'month' => $month,
+                'previous' => Clock::months()[$previousMonth],
+                'previousYear' => $previousYear,
+                'previousMonth' => $previousMonth,
+                'next' => Clock::months()[$nextMonth],
+                'nextYear' => $nextYear,
+                'nextMonth' => $nextMonth,
+                'days' => $days,
+                'employee' => $user,
                 'users' => $users,
             ]
         );
