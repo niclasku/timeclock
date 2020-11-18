@@ -7,6 +7,7 @@ namespace app\models;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
+use  yii\helpers\Json;
 
 use function count;
 use function explode;
@@ -19,13 +20,19 @@ use function preg_match_all;
  * @property int $year
  * @property int $month
  * @property int $day
+ * @property string $name
  */
 class Holiday extends ActiveRecord
 {
     /**
      * @var string
      */
-    public static $calendarUrl = 'https://www.kalendarzswiat.pl/swieta/wolne_od_pracy/';
+    public static $calendarUrl = 'https://feiertage-api.de/api/?jahr=';
+
+    /**
+     * @var string
+     */
+    public static $calendarParams = '&nur_land=SH';
 
     /**
      * {@inheritdoc}
@@ -42,16 +49,11 @@ class Holiday extends ActiveRecord
     public static function readHolidays(int $year): array
     {
         $holidays = [];
-
-        $calendar = file_get_contents(static::$calendarUrl . $year);
-        if ($calendar !== false) {
-            preg_match_all('/data\-date\="([\d\-]+)"/', $calendar, $matches);
-
-            if ($matches) {
-                $holidays = $matches[1];
-            }
+        $calendar = file_get_contents(static::$calendarUrl . $year . static::$calendarParams);
+        $data = Json::decode($calendar);
+        foreach (array_keys($data) as $k) {
+            $holidays[$k] = $data[$k]['datum'];
         }
-
         return $holidays;
     }
 
@@ -86,13 +88,14 @@ class Holiday extends ActiveRecord
         try {
             $holidays = static::readHolidays($year);
 
-            foreach ($holidays as $holiday) {
+            foreach ($holidays as $key => $holiday) {
                 $date = explode('-', $holiday);
                 if (count($date) === 3 && !static::find()->where(
                         [
                             'year' => (int)$date[0],
                             'month' => (int)$date[1],
                             'day' => (int)$date[2],
+                            'name' => $key,
                         ]
                     )->exists()) {
                     $day = new static();
@@ -100,6 +103,7 @@ class Holiday extends ActiveRecord
                     $day->year = (int)$date[0];
                     $day->month = (int)$date[1];
                     $day->day = (int)$date[2];
+                    $day->name = $key;
 
                     $day->save();
                 }
@@ -124,11 +128,33 @@ class Holiday extends ActiveRecord
                 'year' => $year,
             ]
         )->all();
-
         foreach ($holidays as $holiday) {
             $days[] = $holiday->day;
         }
 
         return $days;
+    }
+
+    /**
+     * @param int $day
+     * @param int $month
+     * @param int $year
+     * @return array
+     */
+    public static function getHolidaysOfDay(int $day, int $month, int $year): array
+    {
+        if (!static::isYearPopulated($year)) {
+            static::populateYear($year);
+        }
+
+        $out = Holiday::find()->where(
+            [
+                'month' => $month,
+                'year' => $year,
+                'day' => $day,
+            ]
+        )->all();
+
+        return $out;
     }
 }
