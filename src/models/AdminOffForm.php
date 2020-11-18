@@ -1,39 +1,19 @@
 <?php
 
-declare(strict_types=1);
-
 namespace app\models;
 
-use Exception;
 use Yii;
-use yii\base\Model;
 
-/**
- * Class OffForm
- * @package app\models
- */
-class OffForm extends Model
+class AdminOffForm extends OffForm
 {
-    /**
-     * @var string
-     */
-    public $startDate;
-
-    /**
-     * @var string
-     */
-    public $endDate;
-
-    /**
-     * @var string
-     */
-    public $note;
-
     /**
      * @var int
      */
-    public $type;
+    public $userId;
 
+    /**
+     * @var Clock
+     */
     private $_off;
 
     /**
@@ -44,22 +24,8 @@ class OffForm extends Model
     public function __construct(Off $off, array $config = [])
     {
         $this->_off = $off;
-
-        $this->startDate = $off->start_at;
-        $this->endDate = $off->end_at;
-
-        $this->note = !empty($off->note) ? $off->note : null;
-        $this->type = $off->type;
-
-        parent::__construct($config);
-    }
-
-    /**
-     * @return Off
-     */
-    public function getOff(): Off
-    {
-        return $this->_off;
+        $this->userId = !empty($off->user_id) ? $off->user_id : null;
+        parent::__construct($off, $config);
     }
 
     /**
@@ -74,6 +40,7 @@ class OffForm extends Model
             [['startDate'], 'verifyStart'],
             [['endDate'], 'verifyEnd'],
             [['note'], 'string'],
+            [['userId'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
     }
 
@@ -84,7 +51,7 @@ class OffForm extends Model
     {
         $conditions = [
             'and',
-            ['user_id' => Yii::$app->user->id],
+            ['user_id' => $this->userId],
             ['<=', 'start_at', $this->startDate],
             ['>=', 'end_at', $this->startDate],
         ];
@@ -108,7 +75,7 @@ class OffForm extends Model
         } else {
             $conditions = [
                 'and',
-                ['user_id' => Yii::$app->user->id],
+                ['user_id' => $this->userId],
                 ['<=', 'start_at', $this->endDate],
                 ['>=', 'end_at', $this->startDate],
             ];
@@ -133,6 +100,7 @@ class OffForm extends Model
             'endDate' => Yii::t('app', 'End Day'),
             'note' => Yii::t('app', 'Note'),
             'type' => Yii::t('app', 'Reason'),
+            'userId' => Yii::t('app', 'Name'),
         ];
     }
 
@@ -158,6 +126,7 @@ class OffForm extends Model
         $this->_off->end_at = $this->endDate;
         $this->_off->type = (int)$this->type;
         $this->_off->note = $this->note !== '' ? $this->note : null;
+        $this->_off->user_id = !empty($this->userId) ? $this->userId : null;
 
         $sendInfo = false;
 

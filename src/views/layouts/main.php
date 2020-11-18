@@ -75,6 +75,12 @@ $this->beginPage(); ?>
                                 ) ?></a>
                         </li>
                         <li class="list-inline-item">
+                            <a href="<?= Url::to(['clock/vacations']) ?>"><?= FA::icon('sun') ?> <?= Yii::t(
+                                    'app',
+                                    'Vacation'
+                                ) ?></a>
+                        </li>
+                        <li class="list-inline-item">
                             <a href="<?= Url::to(['clock/projects']) ?>"><?= FA::icon('umbrella') ?> <?= Yii::t(
                                     'app',
                                     'Projects'
@@ -89,6 +95,12 @@ $this->beginPage(); ?>
                     <?php if (Yii::$app->user->identity->role === User::ROLE_ADMIN): ?>
                         <div class="clearfix"></div>
                         <ul class="float-right list-inline menu-admin">
+                            <li class="list-inline-item">
+                                <a href="<?= Url::to(['admin/overview']) ?>"><?= FA::icon('receipt') ?> <?= Yii::t(
+                                        'app',
+                                        'Overview'
+                                    ) ?></a>
+                            </li>
                             <li class="list-inline-item">
                                 <a href="<?= Url::to(['admin/index']) ?>"><?= FA::icon('users') ?> <?= Yii::t(
                                         'app',
@@ -110,6 +122,12 @@ $this->beginPage(); ?>
                                 <a href="<?= Url::to(['admin/off']) ?>"><?= FA::icon('plane') ?> <?= Yii::t(
                                         'app',
                                         'Off-Time'
+                                    ) ?></a>
+                            </li>
+                            <li class="list-inline-item">
+                                <a href="<?= Url::to(['admin/vacations']) ?>"><?= FA::icon('sun') ?> <?= Yii::t(
+                                        'app',
+                                        'Vacation'
                                     ) ?></a>
                             </li>
                             <li class="list-inline-item">

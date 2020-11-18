@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace app\models;
 
+use DateInterval;
+use DatePeriod;
+use DateTime;
 use Yii;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
@@ -65,6 +68,20 @@ class Clock extends ActiveRecord implements NoteInterface
             6 => Yii::t('app', 'Sat'),
             7 => Yii::t('app', 'Sun'),
         ];
+    }
+
+    /**
+     * @param $year
+     * @param $month
+     * @return DatePeriod
+     */
+    public static function getDatePeriod($year, $month)
+    {
+        $begin = new DateTime( $year . '-' . $month .'-01' );
+        $end = new DateTime( $year . '-' . $month .'-01' );
+        $end = $end->modify( '+1 month' );
+        $interval = new DateInterval('P1D');
+        return new DatePeriod($begin, $interval, $end);
     }
 
     /**

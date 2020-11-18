@@ -2,6 +2,7 @@
 
 use app\api\Api;
 use app\base\Alert;
+use app\models\Off;
 use app\models\User;
 use yii\caching\FileCache;
 use yii\debug\Module;
@@ -86,6 +87,20 @@ $config = [
         'company' => 'Company Name',
         'email' => 'email@company.com',
         'allowedDomains' => ['@company.com'],
+        'employeeSessionEdit' => true,
+        'employeeSessionDelete' => true,
+        'employeeOffTimeEdit' => true,
+        'employeeOffTimeDelete' => true,
+        'employeeOffTimeApprovedDelete' => true,
+        'adminSessionAdd' => false,
+        'adminSessionEdit' => false,
+        'adminSessionDelete' => false,
+        'adminOffTimeAdd' => false,
+        'adminOffTimeEdit' => false,
+        'adminOffTimeDelete' => false,
+        'showAllVacations' => false,
+        'approvableOffTime' => [Off::TYPE_SICK, Off::TYPE_VACATION],
+        'weekendDays' => [7],
         'uploadPath' => dirname(__DIR__) . '/../uploads/',
     ],
 ];

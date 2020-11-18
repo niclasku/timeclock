@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace app\controllers;
 
 use app\base\BaseController;
+use app\models\AdminClockForm;
+use app\models\AdminOffForm;
 use app\models\Clock;
 use app\models\Holiday;
 use app\models\Off;
 use app\models\Project;
 use app\models\TerminalForm;
 use app\models\User;
+use DateInterval;
+use DatePeriod;
+use DateTime;
+use DateTimeZone;
 use Exception;
 use Throwable;
 use Yii;
@@ -19,6 +25,7 @@ use yii\base\InvalidConfigException;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
 use yii\db\Query;
+use yii\db\StaleObjectException;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\helpers\ArrayHelper;
@@ -92,6 +99,8 @@ class AdminController extends BaseController
                 'history',
                 'off',
                 'calendar',
+                'overview',
+                'vacations',
                 'terminal-edit',
             ]
         );
@@ -114,6 +123,39 @@ class AdminController extends BaseController
             return false;
         }
 
+        switch($action->id) {
+            case 'session-add':
+                if (!Yii::$app->params['adminSessionAdd']) {
+                    return false;
+                }
+                break;
+            case 'session-edit':
+                if (!Yii::$app->params['adminSessionEdit']) {
+                    return false;
+                }
+                break;
+            case 'session-delete':
+                if (!Yii::$app->params['adminSessionDelete']) {
+                    return false;
+                }
+                break;
+            case 'off-add':
+                if (!Yii::$app->params['adminOffTimeAdd']) {
+                    return false;
+                }
+                break;
+            case 'off-edit':
+                if (!Yii::$app->params['adminOffTimeEdit']) {
+                    return false;
+                }
+                break;
+            case 'off-delete':
+                if (!Yii::$app->params['adminOffTimeDelete']) {
+                    return false;
+                }
+                break;
+        }
+
         return true;
     }
 
@@ -128,6 +170,168 @@ class AdminController extends BaseController
             'index',
             [
                 'users' => $users,
+            ]
+        );
+    }
+
+    /**
+     * @param null $month
+     * @param null $year
+     * @param null $id
+     * @return string|Response
+     */
+    public function actionOverview($month = null, $year = null, $id = null)
+    {
+        [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
+
+        $user = null;
+        if (empty($id)) {
+            $id = 1;
+        }
+
+        $user = User::find()->where(['id' => $id, 'status' => User::STATUS_ACTIVE])->one();
+
+        if ($user === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find user of given ID.'));
+        }
+
+        $range = Clock::getDatePeriod($year, $month);
+        $days = [];
+        foreach($range as $date){
+            $today = $date->format("Y-m-d");
+            $tomorrow = (clone $date)->modify('+1 day')->format("Y-m-d");
+
+            // get off-time for this day
+            $offConditions = [
+                'and',
+                ['>=', 'end_at', $today],
+                ['<=', 'start_at', $today],
+                ['user_id' => $user->id],
+            ];
+            $offDay = Off::find()
+                ->joinWith(['user' => static function (ActiveQuery $query) {
+                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                }], false)
+                ->where($offConditions)->all();
+
+            // get clock in/out for this day
+            $clockConditions = [
+                'and',
+                ['<', 'clock_out', (int)Yii::$app->formatter->asTimestamp($tomorrow. ' 00:00:00')],
+                ['>=', 'clock_in', (int)Yii::$app->formatter->asTimestamp($today. ' 00:00:00')],
+                ['user_id' => $user->id],
+            ];
+            $clockDay = Clock::find()
+                ->joinWith(['user' => static function (ActiveQuery $query) {
+                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                }], false)
+                ->where($clockConditions)->orderBy(['clock_in' => SORT_ASC])->all();
+
+            // get holidays
+            $holidays = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
+
+            // join data
+            $value = [];
+            $value['date'] = $date;
+            foreach ($offDay as $item) {
+                $value['off'][] = $item;
+            }
+            foreach ($clockDay as $item) {
+                $value['clock'][] = $item;
+            }
+            foreach ($holidays as $item) {
+                $value['holiday'][] = $item;
+            }
+            $days[] = $value;
+        }
+
+        $users = User::find()
+            ->where(['status' => User::STATUS_ACTIVE])
+            ->indexBy('id')
+            ->orderBy(['name' => SORT_ASC])
+            ->all();
+
+        return $this->render(
+            'overview',
+            [
+                'months' => Clock::months(),
+                'year' => $year,
+                'month' => $month,
+                'previous' => Clock::months()[$previousMonth],
+                'previousYear' => $previousYear,
+                'previousMonth' => $previousMonth,
+                'next' => Clock::months()[$nextMonth],
+                'nextYear' => $nextYear,
+                'nextMonth' => $nextMonth,
+                'days' => $days,
+                'employee' => $user,
+                'users' => $users,
+            ]
+        );
+    }
+
+    /**
+     * @param string|int|null $year
+     * @return string
+     */
+    public function actionVacations($year = null): string
+    {
+        [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
+        $vacations = [];
+        foreach (range(1, 12) as $month) {
+            $range = Clock::getDatePeriod($year, $month);
+            $employees = [];
+            foreach (User::find()->all() as $user) {
+                $employee = [];
+                $employee['name'] = $user->name;
+                foreach ($range as $date) {
+                    $today = $date->format("Y-m-d");
+                    // get off-time for this day
+                    $offConditions = [
+                        'and',
+                        ['>=', 'end_at', $today],
+                        ['<=', 'start_at', $today],
+                        ['user_id' => $user->id],
+                    ];
+                    $offDay = Off::find()
+                        ->joinWith(['user' => static function (ActiveQuery $query) {
+                            $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                        }], false)
+                        ->where($offConditions)->one();
+
+                    // get holidays
+                    $holidayDay = Holiday::find()->where(
+                        [
+                            'month' => $month,
+                            'year' => $year,
+                            'day' => $date->format("d"),
+                        ]
+                    )->one();
+
+                    // join data
+                    $value['off'] = false;
+                    $value['holiday'] = false;
+                    if ($offDay) {
+                        $value['off'] = $offDay;
+                    }
+                    if ($holidayDay) {
+                        $value['holiday'] = 1;
+                    }
+                    if (in_array((int)$date->format('N'), Yii::$app->params['weekendDays'])) {
+                        $value['holiday'] = 2;
+                    }
+                    $employee['day'][] = $value;
+                }
+                $employees[] = $employee;
+            }
+            $vacations[] = ['range' => $range, 'employees' => $employees];
+        }
+
+        return $this->render(
+            'vacations',
+            [
+                'vacations' => $vacations,
+                'year' => $year,
             ]
         );
     }
@@ -998,10 +1202,16 @@ class AdminController extends BaseController
      * @param string|int|null $month
      * @param string|int|null $year
      * @param string|int|null $id
+     * @param bool|int $wholeYear
      * @return string|Response
      */
-    public function actionOff($month = null, $year = null, $id = null)
+    public function actionOff($month = null, $year = null, $id = null, $wholeYear = null)
     {
+        if ($wholeYear === null && $year === null && Yii::$app->params['showAllVacations']) {
+            // first visit
+            $wholeYear = true;
+        }
+
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
 
         $user = null;
@@ -1019,11 +1229,19 @@ class AdminController extends BaseController
             ->orderBy(['name' => SORT_ASC])
             ->all();
 
-        $conditions = [
-            'and',
-            ['<', 'start_at', $nextYear . '-' . ($nextMonth < 10 ? '0' : '') . $nextMonth . '-01'],
-            ['>=', 'end_at', $year . '-' . ($month < 10 ? '0' : '') . $month . '-01'],
-        ];
+        if ($wholeYear == true) {
+            $conditions = [
+                'and',
+                ['<', 'start_at', $year + 1 . '-01-01'],
+                ['>=', 'end_at', $year . '-01-01'],
+            ];
+        } else {
+            $conditions = [
+                'and',
+                ['<', 'start_at', $nextYear . '-' . ($nextMonth < 10 ? '0' : '') . $nextMonth . '-01'],
+                ['>=', 'end_at', $year . '-' . ($month < 10 ? '0' : '') . $month . '-01'],
+            ];
+        }
 
         if ($user !== null) {
             $conditions[] = ['user_id' => $user->id];
@@ -1051,6 +1269,7 @@ class AdminController extends BaseController
                 'nextMonth' => $nextMonth,
                 'employee' => $user,
                 'users' => $users,
+                'wholeYear' => $wholeYear,
                 'off' => $off,
             ]
         );
@@ -1066,16 +1285,16 @@ class AdminController extends BaseController
 
         if ($off === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
-        } elseif ($off->type !== Off::TYPE_VACATION) {
-            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not a vacation.'));
+        } elseif (!in_array($off->type, Yii::$app->params['approvableOffTime'])) {
+            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not approvable.'));
         } else {
             $previous = $off->approved;
             $off->approved = 1;
 
             if (!$off->save(false, ['approved', 'updated_at'])) {
-                Yii::$app->alert->danger(Yii::t('app', 'There was an error while approving vacation.'));
+                Yii::$app->alert->danger(Yii::t('app', 'There was an error while approving off-time.'));
             } else {
-                Yii::$app->alert->success(Yii::t('app', 'Vacation has been approved.'));
+                Yii::$app->alert->success(Yii::t('app', 'Off-time has been approved.'));
 
                 if ($previous !== $off->approved) {
                     Off::sendInfoToApplicant($off);
@@ -1096,16 +1315,16 @@ class AdminController extends BaseController
 
         if ($off === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
-        } elseif ($off->type !== Off::TYPE_VACATION) {
-            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not a vacation.'));
+        } elseif (!in_array($off->type, Yii::$app->params['approvableOffTime'])) {
+            Yii::$app->alert->danger(Yii::t('app', 'Selected off-time is not approvable.'));
         } else {
             $previous = $off->approved;
             $off->approved = 2;
 
             if (!$off->save(false, ['approved', 'updated_at'])) {
-                Yii::$app->alert->danger(Yii::t('app', 'There was an error while denying vacation.'));
+                Yii::$app->alert->danger(Yii::t('app', 'There was an error while denying off-time.'));
             } else {
-                Yii::$app->alert->success(Yii::t('app', 'Vacation has been denied.'));
+                Yii::$app->alert->success(Yii::t('app', 'Off-time has been denied.'));
 
                 if ($previous !== $off->approved) {
                     Off::sendInfoToApplicant($off);
@@ -1162,6 +1381,242 @@ class AdminController extends BaseController
         }
 
         return $this->redirect(['index']);
+    }
+
+    /**
+     * @param string|int|null $month
+     * @param string|int|null $year
+     * @param string|int|null $day
+     * @return string|Response
+     * @throws Exception
+     */
+    public function actionSessionAdd($month = null, $year = null, $day = null)
+    {
+        if (!is_numeric($month) || $month < 1 || $month > 12) {
+            $month = date('n');
+        }
+        if (!is_numeric($year) || $year < 2018) {
+            $year = date('Y');
+        }
+        if (!is_numeric($day) || $day < 1 || $day > 31) {
+            $day = date('j');
+        }
+
+        $model = new AdminClockForm(
+            new Clock(
+                [
+                    'project_id' => Yii::$app->user->identity->project_id,
+                    'clock_in' => (new DateTime(
+                        $year . '-' . ($month < 10 ? '0' : '') . $month . '-' . ($day < 10 ? '0' : '') . $day . date(
+                            ' H:i:s'
+                        ),
+                        new DateTimeZone(Yii::$app->timeZone)
+                    )
+                    )->getTimestamp(),
+                ]
+            )
+        );
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->alert->success(Yii::t('app', 'Session has been saved.'));
+            return $this->goBack(null, true);
+        }
+
+        $users = ArrayHelper::map(
+            User::find()->where(['status' => User::STATUS_ACTIVE, 'role' => [User::ROLE_EMPLOYEE, User::ROLE_ADMIN]])
+                ->orderBy(['name' => SORT_ASC])->all(),
+            'id',
+            'name'
+        );
+
+        return $this->render(
+            'session-add',
+            [
+                'model' => $model,
+                'projects' => ['' => Yii::t('app', '-- no project --')] + Yii::$app->user->identity->assignedProjects,
+                'users' => $users,
+            ]
+        );
+    }
+
+    /**
+     * @param string|int|null $month
+     * @param string|int|null $year
+     * @param string|int|null $day
+     * @return string|Response
+     * @throws Exception
+     */
+    public function actionOffAdd($month = null, $year = null, $day = null)
+    {
+        if (!is_numeric($month) || $month < 1 || $month > 12) {
+            $month = date('n');
+        }
+        if (!is_numeric($year) || $year < 2018) {
+            $year = date('Y');
+        }
+        if (!is_numeric($day) || $day < 1 || $day > 31) {
+            $day = date('j');
+        }
+
+        $model = new AdminOffForm(
+            new Off(
+                [
+                    'start_at' => $year . '-' . ($month < 10 ? '0' : '') . $month . '-' . ($day < 10 ? '0' : '') . $day,
+                    'end_at' => $year . '-' . ($month < 10 ? '0' : '') . $month . '-' . ($day < 10 ? '0' : '') . $day,
+                ]
+            )
+        );
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->alert->success(Yii::t('app', 'Off-time has been saved.'));
+
+            return $this->goBack(null, true);
+        }
+
+        $users = ArrayHelper::map(
+            User::find()->where(['status' => User::STATUS_ACTIVE, 'role' => [User::ROLE_EMPLOYEE, User::ROLE_ADMIN]])
+                ->orderBy(['name' => SORT_ASC])->all(),
+            'id',
+            'name'
+        );
+
+        return $this->render(
+            'off-add',
+            [
+                'model' => $model,
+                'users' => $users,
+            ]
+        );
+    }
+
+    /**
+     * @param string|int $id
+     * @param string|int $user_id
+     * @return string|Response
+     * @throws Exception
+     */
+    public function actionSessionEdit($id, $user_id)
+    {
+        $session = Clock::find()->where(
+            [
+                'id' => (int)$id,
+                'user_id' => (int)$user_id,
+            ]
+        )->one();
+
+        if ($session === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find session of given ID.'));
+
+            return $this->goBack(null, true);
+        }
+
+        $model = new AdminClockForm($session);
+
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->alert->success(Yii::t('app', 'Session has been saved.'));
+
+            return $this->goBack(null, true);
+        }
+
+        return $this->render(
+            'session-edit',
+            [
+                'session' => $session,
+                'model' => $model,
+                'projects' => ['' => Yii::t('app', '-- no project --')] + Yii::$app->user->identity->assignedProjects,
+            ]
+        );
+    }
+
+    /**
+     * @param string|int $id
+     * @param string|int $user_id
+     * @return string|Response
+     * @throws Exception
+     */
+    public function actionOffEdit($id, $user_id)
+    {
+        $off = Off::find()->where(
+            [
+                'id' => (int)$id,
+                'user_id' => (int)$user_id,
+            ]
+        )->one();
+
+        if ($off === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
+
+            return $this->goBack(null, true);
+        }
+
+        $model = new AdminOffForm($off);
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->alert->success(Yii::t('app', 'Off-time has been saved.'));
+
+            return $this->goBack(null, true);
+        }
+
+        return $this->render(
+            'off-edit',
+            [
+                'off' => $off,
+                'model' => $model,
+                'marked' => Off::getFutureOffDays($off->id),
+            ]
+        );
+    }
+
+    /**
+     * @param string|int $id
+     * @param string|int $user_id
+     * @return Response
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
+    public function actionOffDelete($id, $user_id): Response
+    {
+        $off = Off::find()->where(
+            [
+                'id' => (int)$id,
+                'user_id' => (int)$user_id,
+            ]
+        )->one();
+
+        if ($off === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
+        } elseif (!$off->delete()) {
+            Yii::$app->alert->danger(Yii::t('app', 'There was an error while deleting off-time.'));
+        } else {
+            Yii::$app->alert->success(Yii::t('app', 'Off-time has been deleted.'));
+        }
+
+        return $this->goBack(null, true);
+    }
+
+    /**
+     * @param string|int $id
+     * @param string|int $user_id
+     * @param bool $stay
+     * @return Response
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
+    public function actionSessionDelete($id, $user_id, bool $stay = true): Response
+    {
+        $clock = Clock::find()->where(
+            [
+                'id' => (int)$id,
+                'user_id' => (int)$user_id,
+            ]
+        )->one();
+
+        if ($clock === null) {
+            Yii::$app->alert->danger(Yii::t('app', 'Can not find session of given ID.'));
+        } elseif (!$clock->delete()) {
+            Yii::$app->alert->danger(Yii::t('app', 'There was an error while deleting session.'));
+        } else {
+            Yii::$app->alert->success(Yii::t('app', 'Session has been deleted.'));
+        }
+
+        return $this->goBack(null, $stay);
     }
 
     /**

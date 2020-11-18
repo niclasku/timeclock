@@ -11,11 +11,15 @@ use app\models\Holiday;
 use app\models\Off;
 use app\models\OffForm;
 use app\models\Project;
+use app\models\User;
+use DateInterval;
+use DatePeriod;
 use DateTime;
 use DateTimeZone;
 use Exception;
 use Throwable;
 use Yii;
+use yii\db\ActiveQuery;
 use yii\db\Expression;
 use yii\db\Query;
 use yii\db\StaleObjectException;
@@ -75,8 +79,46 @@ class ClockController extends BaseController
                 'add',
                 'off-add',
                 'off-edit',
+                'vacations',
             ]
         );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function beforeAction($action): bool
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        if (Yii::$app->user->identity->role === User::ROLE_EMPLOYEE) {
+            switch($action->id) {
+                case 'edit':
+                    if (!Yii::$app->params['employeeSessionEdit']) {
+                        return false;
+                    }
+                break;
+                case 'delete':
+                    if (!Yii::$app->params['employeeSessionDelete']) {
+                        return false;
+                    }
+                    break;
+                case 'off-edit':
+                    if (!Yii::$app->params['employeeOffTimeEdit']) {
+                        return false;
+                    }
+                    break;
+                case 'off-delete':
+                    if (!Yii::$app->params['employeeOffTimeDelete']) {
+                        return false;
+                    }
+                    break;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -194,6 +236,74 @@ class ClockController extends BaseController
                         ['user_id' => Yii::$app->user->id],
                     ]
                 )->orderBy(['start_at' => SORT_DESC])->all(),
+            ]
+        );
+    }
+
+    /**
+     * @param string|int|null $year
+     * @return string
+     */
+    public function actionVacations($year = null): string
+    {
+        [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
+        $vacations = [];
+        foreach (range(1, 12) as $month) {
+            $range = Clock::getDatePeriod($year, $month);
+            $employees = [];
+            foreach (User::find()->all() as $user) {
+                $employee = [];
+                $employee['name'] = $user->name;
+                foreach ($range as $date) {
+                    $today = $date->format("Y-m-d");
+                    // get off-time for this day
+                    $offConditions = [
+                        'and',
+                        ['>=', 'end_at', $today],
+                        ['<=', 'start_at', $today],
+                        ['user_id' => $user->id],
+                        ['type' => Off::TYPE_VACATION],
+                    ];
+                    $offDay = Off::find()
+                        ->joinWith(['user' => static function (ActiveQuery $query) {
+                            $query->andWhere(['status' => User::STATUS_ACTIVE]);
+                        }], false)
+                        ->where($offConditions)->one();
+
+                    // get holidays
+                    $holidayDay = Holiday::find()->where(
+                        [
+                            'month' => $month,
+                            'year' => $year,
+                            'day' => $date->format("d"),
+                        ]
+                    )->one();
+
+                    // join data
+                    $value['off'] = false;
+                    $value['holiday'] = false;
+                    if ($offDay) {
+                        $value['off'] = $offDay;
+                    }
+                    if ($holidayDay) {
+                        $value['holiday'] = 1;
+                    }
+                    if (in_array((int)$date->format('N'), Yii::$app->params['weekendDays'])) {
+                        $value['holiday'] = 2;
+                    }
+
+                    $employee['day'][] = $value;
+                }
+                $employees[] = $employee;
+            }
+            $vacations[] = ['range' => $range, 'employees' => $employees];
+        }
+
+        return $this->render(
+            'vacations',
+            [
+                'vacations' => $vacations,
+                'year' => $year,
             ]
         );
     }
@@ -476,6 +586,9 @@ class ClockController extends BaseController
 
         if ($off === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find off-time of given ID.'));
+        } elseif (Yii::$app->user->identity->role === User::ROLE_EMPLOYEE &&
+            ($off->approved === 1 && !Yii::$app->params['employeeOffTimeApprovedDelete'])) {
+                Yii::$app->alert->danger(Yii::t('app', 'You are not allowed to delete approved off-times.'));
         } elseif (!$off->delete()) {
             Yii::$app->alert->danger(Yii::t('app', 'There was an error while deleting off-time.'));
         } else {

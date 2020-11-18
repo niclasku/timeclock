@@ -1,5 +1,6 @@
-<p><?= Yii::t('app', 'User {user} requested vacation from {start} to {end}, this awaits administrator approval.', [
+<p><?= Yii::t('app', 'User {user} requested {type} from {start} to {end}, this awaits administrator approval.', [
     'user' => $user,
+    'type' => $type,
     'start' => $start,
     'end' => $end,
 ]) ?></p>

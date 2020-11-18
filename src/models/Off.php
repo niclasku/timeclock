@@ -35,6 +35,32 @@ class Off extends ActiveRecord implements NoteInterface
 {
     public const TYPE_SHORT = 0;
     public const TYPE_VACATION = 1;
+    public const TYPE_SICK = 2;
+    public const TYPES = [self::TYPE_SHORT, self::TYPE_VACATION, self::TYPE_SICK];
+
+    /**
+     * @return array
+     */
+    public static function names(): array
+    {
+        return [
+            0 => Yii::t('app', 'Other'),
+            1 => Yii::t('app', 'Vacation'),
+            2 => Yii::t('app', 'Sick Leave'),
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public static function icons(): array
+    {
+        return [
+            0 => 'slash',
+            1 => 'plane',
+            2 => 'medkit',
+        ];
+    }
 
     /**
      * {@inheritdoc}
@@ -60,7 +86,7 @@ class Off extends ActiveRecord implements NoteInterface
         return [
             [['type'], 'default', 'value' => self::TYPE_SHORT],
             [['user_id', 'start_at', 'end_at', 'type'], 'required'],
-            [['type'], 'in', 'range' => [self::TYPE_SHORT, self::TYPE_VACATION]],
+            [['type'], 'in', 'range' => self::TYPES],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
             [['end_at', 'start_at'], 'date', 'format' => 'yyyy-MM-dd'],
             [['note'], 'string'],
@@ -104,7 +130,7 @@ class Off extends ActiveRecord implements NoteInterface
             }
 
             if (!in_array((int)date('j', $marker), $holidays, true)
-                && !in_array((int)date('N', $marker), [6, 7], true)) {
+                && !in_array((int)date('N', $marker), Yii::$app->params['weekendDays'], true)) {
                 $workDays++;
             }
 
@@ -116,15 +142,20 @@ class Off extends ActiveRecord implements NoteInterface
 
     /**
      * @param int|null $except
+     * @param int|null $user_id
      * @return array
      * @throws Exception
      */
-    public static function getFutureOffDays(?int $except = null): array
+    public static function getFutureOffDays(?int $except = null, ?int $user_id = null): array
     {
+        if ($user_id === null) {
+            $user_id = Yii::$app->user->id;
+        }
+
         $offs = static::find()->where(
             [
                 'and',
-                ['user_id' => Yii::$app->user->id],
+                ['user_id' => $user_id],
                 ['>=', 'end_at', Yii::$app->formatter->asDate('now', 'yyyy-MM-dd')],
             ]
         );
@@ -153,25 +184,27 @@ class Off extends ActiveRecord implements NoteInterface
      */
     public static function sendInfoToApplicant(Off $off): void
     {
+        $type = self::names()[$off->type];
         $result = $off->approved;
         $template = null;
 
         if ($result === 1) {
             $template = 'approve';
-            $subject = Yii::t('app', 'Vacation has been approved.');
+            $subject = Yii::t('app', 'Off-time has been approved.');
         } elseif ($result === 2) {
             $template = 'deny';
-            $subject = Yii::t('app', 'Vacation has been denied.');
+            $subject = Yii::t('app', 'Off-time has been denied.');
         }
 
         if ($template !== null) {
             $mail = Yii::$app->mailer->compose(
                 [
-                    'html' => 'vacation-' . $template . '-html',
-                    'text' => 'vacation-' . $template . '-text',
+                    'html' => $template . '-html',
+                    'text' => $template . '-text',
                 ],
                 [
                     'user' => $off->user->name,
+                    'type' => $type,
                     'start' => $off->start_at,
                     'end' => $off->end_at,
                 ]
@@ -181,7 +214,7 @@ class Off extends ActiveRecord implements NoteInterface
                 ->setSubject($subject);
 
             if (!$mail->send()) {
-                Yii::error('Error while sending vacation result mail to applicant');
+                Yii::error('Error while sending mail to applicant');
             }
         }
     }
@@ -192,7 +225,9 @@ class Off extends ActiveRecord implements NoteInterface
      */
     public static function sendInfoToAdmin(Off $off): void
     {
-        if ($off->type === self::TYPE_VACATION) {
+        $type = self::names()[$off->type];
+
+        if (in_array($off->type, Yii::$app->params['approvableOffTime'], true)) {
             $admins = ArrayHelper::map(
                 User::find()->where(
                     [
@@ -207,11 +242,12 @@ class Off extends ActiveRecord implements NoteInterface
             if ($admins) {
                 $mail = Yii::$app->mailer->compose(
                     [
-                        'html' => 'vacation-request-html',
-                        'text' => 'vacation-request-text',
+                        'html' => 'request-html',
+                        'text' => 'request-text',
                     ],
                     [
                         'user' => $off->user->name,
+                        'type' => $type,
                         'start' => $off->start_at,
                         'end' => $off->end_at,
                         'link' => Url::to(
@@ -226,10 +262,10 @@ class Off extends ActiveRecord implements NoteInterface
                 )
                     ->setFrom(Yii::$app->params['email'])
                     ->setTo($admins)
-                    ->setSubject(Yii::t('app', 'New Vacation Request'));
+                    ->setSubject(Yii::t('app', 'New Request'));
 
                 if (!$mail->send()) {
-                    Yii::error('Error while sending vacation result mail to applicant');
+                    Yii::error('Error while sending mail to applicant');
                 }
             }
         }

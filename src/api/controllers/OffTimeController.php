@@ -89,7 +89,7 @@ class OffTimeController extends ActiveController
                 ))
                     ->addRule(['id', 'createdAt', 'updatedAt'], 'integer', ['min' => 1])
                     ->addRule(['startAt', 'endAt'], 'date', ['format' => 'yyyy-MM-dd'])
-                    ->addRule(['type'], 'in', ['range' => [Off::TYPE_VACATION, Off::TYPE_SHORT]])
+                    ->addRule(['type'], 'in', ['range' => Off::TYPES])
                     ->addRule(['approved'], 'in', ['range' => [0, 1, 2]])
                     ->addRule(['note'], 'string');
             },

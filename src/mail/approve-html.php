@@ -1,5 +1,6 @@
 <p><?= Yii::t('app', 'Hello, {user}', ['user' => $user]) ?></p>
-<p><?= Yii::t('app', 'Your vacation request ({start} - {end}) has been denied :(', [
+<p><?= Yii::t('app', 'Your {type} request ({start} - {end}) has been approved :)', [
+    'type' => $type,
     'start' => $start,
     'end' => $end,
 ]) ?></p>

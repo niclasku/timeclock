@@ -11,7 +11,7 @@ use yii\helpers\Url;
 /**
  * @var $this yii\web\View
  * @var $model OffForm
- * @var $marked array
+ * @var $users array
  */
 
 $this->title = Yii::t('app', 'Adding Off-Time');
@@ -33,13 +33,16 @@ $this->title = Yii::t('app', 'Adding Off-Time');
         </div>
         <?php $form = ActiveForm::begin(); ?>
 
-            <div class="form-group row">
+        <div class="form-group">
+            <div class="row col-sm-6">
+                <?= $form->field($model, 'userId')->dropDownList($users, ['class' => 'custom-select']) ?>
+            </div>
+            <div class="row">
                 <div class="col-sm-6">
                     <?= $form->field($model, 'startDate')->widget(DatePicker::class, [
                         'date' => $model->getOff()->start_at,
                         'timePicker' => false,
                         'showOtherMonths' => false,
-                        'marked' => $marked,
                     ]) ?>
                 </div>
                 <div class="col-sm-6">
@@ -47,33 +50,33 @@ $this->title = Yii::t('app', 'Adding Off-Time');
                         'date' => $model->getOff()->end_at,
                         'timePicker' => false,
                         'showOtherMonths' => false,
-                        'marked' => $marked,
                     ]) ?>
                 </div>
             </div>
+        </div>
+        <?php
+            $types = [];
+            foreach (Off::TYPES as $type) {
+                $types[$type] = Off::names()[$type];
+            }
+        ?>
 
-            <?php
-                $types = [];
-                foreach (Off::TYPES as $type) {
-                    $types[$type] = Off::names()[$type];
-                }
-            ?>
+        <?=
+        $form->field($model, 'type')->radioList($types)
+            ->hint(Yii::t('app', 'Some off-times have to be approved by an administrator after submission. You and the administrators are going to receive email notifications about it.'))
+        ?>
 
-            <?= $form->field($model, 'type')->radioList($types)
-                ->hint(Yii::t('app', 'Some off-times have to be approved by an administrator after submission. You and the administrators are going to receive email notifications about it.'))
-            ?>
+        <?= $form->field($model, 'note')->textarea() ?>
 
-            <?= $form->field($model, 'note')->textarea() ?>
-
-            <div class="form-group text-right">
-                <?= Html::submitButton(
-                    FA::icon('check-circle') . ' ' . Yii::t('app', 'Save'),
-                    [
-                        'class' => 'btn btn-primary',
-                        'name' => 'save-button',
-                    ]
-                ) ?>
-            </div>
+        <div class="form-group text-right">
+            <?= Html::submitButton(
+                FA::icon('check-circle') . ' ' . Yii::t('app', 'Save'),
+                [
+                    'class' => 'btn btn-primary',
+                    'name' => 'save-button',
+                ]
+            ) ?>
+        </div>
 
         <?php ActiveForm::end(); ?>
     </div>
