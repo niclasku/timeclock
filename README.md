@@ -1,8 +1,8 @@
 # TimeClock
 
-![Latest Stable Version](https://img.shields.io/packagist/v/bizley/timeclock.svg)
-[![Total Downloads](https://img.shields.io/packagist/dt/bizley/timeclock.svg)](https://packagist.org/packages/bizley/timeclock)
 [![Yii2](https://img.shields.io/badge/Powered_by-Yii_Framework-green.svg?style=flat)](https://www.yiiframework.com/)
+
+#### This fork provides necessary functionality for an external [timeclock terminal](https://github.com/niclasku/rpi-timeclock-terminal) and some other modifications.
 
 Simple work time clocking service built on [Yii 2 framework](https://www.yiiframework.com).
 
@@ -18,13 +18,13 @@ Simple work time clocking service built on [Yii 2 framework](https://www.yiifram
 3. Prepare configuration for DB of your choice. Place it in `/src/config/db.php`.
 4. Modify the `/src/config/web.php` file to change:
 
-    - `timeZone` (default `UTC`),
-    - `language` (default `en-US`; `pl` and `de` translations are provided in `/src/messages/` folder),
-    - `components > mailer` configuration to actually send emails (needed for password reset),
-    - `components > formatter` configuration of date and time formats,
-    - `params > company` (default `Company Name`; displayed in footer and other layout places),
-    - `params > email` (default `email@company.com`; used as the email sender address for emails),
-    - `params > allowedDomains` (default `['@company.com']`; array with email domains allowed for registration).
+    - `timeZone` (default `UTC`)
+    - `language` (default `en-US`; `pl` and `de` translations are provided in `/src/messages/` folder)
+    - `components > mailer` configuration to actually send emails (needed for password reset)
+    - `components > formatter` configuration of date and time formats
+    - `params > company` (default `Company Name`; displayed in footer and other layout places)
+    - `params > email` (default `email@company.com`; used as the email sender address for emails)
+    - `params > allowedDomains` (default `['@company.com']`; array with email domains allowed for registration)
     - `params > employeeSessionEdit` (default `true`; allows employees to edit own sessions)
     - `params > employeeSessionDelete` (default `true`; allows employees to delete own sessions)
     - `params > employeeOffTimeEdit` (default `true`; allows employees to edit own off-times)
@@ -36,12 +36,17 @@ Simple work time clocking service built on [Yii 2 framework](https://www.yiifram
     - `params > adminOffTimeAdd` (default `false`; allows admins to add off-time)
     - `params > adminOffTimeEdit` (default `false`; allows admins to edit every off-time)
     - `params > adminOffTimeDelete` (default `false`; allows admins to delete every off-time)
+    - `params > showAllVacations` (default `false`; shows off-times of the whole year first)
+    - `params > approvableOffTime` (default `[Off::TYPE_SICK, Off::TYPE_VACATION]`; defines which off-time types need an approval)
+    - `params > weekendDays` (default `[7]`; defines which days of the week are actually weekend for employees)
+    - `params > uploadPath` (default `dirname(__DIR__) . '/../uploads/'`; path to photo upload folder)
 
 5. Change `/public/index.php` file to set `YII_DEBUG` mode to `false` and `YII_ENV` environment to `prod`.
 6. Apply migrations by running in console `php yii migrate`.
 7. Start webserver and register first account.
 8. If you want to make an account to be admin run in console `php yii admin/set ID` where `ID` is DB identifier of account 
    to be set (usually first one is `1`).
+9. If you want to use an external timeclock terminal you can get a special API token via `php yii terminal/add`.
    
 ## Ground rules
 
