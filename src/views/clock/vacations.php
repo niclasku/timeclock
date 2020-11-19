@@ -7,6 +7,7 @@
  */
 
 use app\models\Clock;
+use app\models\User;
 use app\widgets\fontawesome\FA;
 use yii\helpers\Url;
 
@@ -90,9 +91,13 @@ $this->title = Yii::t('app', 'Vacation');
                                     <?php else: ?>
                                         class="table-success">
                                     <?php endif; ?>
-                                        <a href=<?= Url::to(['clock/off-edit', 'id' => $day['off']->id]) ?> >
-                                            <div style="height:100%; width:100%"><br></div>
-                                        </a>
+                                        <?php if ($employee['id'] === Yii::$app->user->id &&
+                                            (Yii::$app->user->identity->role !== User::ROLE_EMPLOYEE ||
+                                                Yii::$app->params['employeeOffTimeDelete'])): ?>
+                                            <a href=<?= Url::to(['clock/off-edit', 'id' => $day['off']->id]) ?> >
+                                                <div style="height:100%; width:100%"><br></div>
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                 <?php else: ?>
                                     <td class="table-active"></td>

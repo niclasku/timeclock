@@ -170,12 +170,12 @@ foreach ($days as $day) {
         <div class="row form-group">
             <div class="col-lg-12">
                 <?php if (Yii::$app->params['adminSessionAdd']): ?>
-                    <a href="<?= Url::to(['admin/add']) ?>" class="btn btn-warning btn-sm float-right ml-1">
+                    <a href="<?= Url::to(['admin/session-add']) ?>" class="btn btn-warning btn-sm float-right ml-1">
                         <?= FA::icon('plus') ?> <?= Yii::t('app', 'Add Session') ?>
                     </a>
                 <?php endif; ?>
                 <?php if (Yii::$app->params['adminOffTimeAdd']): ?>
-                    <a href="<?= Url::to(['admin/add-off']) ?>" class="btn btn-warning btn-sm float-right ml-1">
+                    <a href="<?= Url::to(['admin/off-add']) ?>" class="btn btn-warning btn-sm float-right ml-1">
                         <?= FA::icon('plus') ?> <?= Yii::t('app', 'Add Off-Time') ?>
                     </a>
                 <?php endif; ?>
