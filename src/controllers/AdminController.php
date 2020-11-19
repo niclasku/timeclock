@@ -182,6 +182,7 @@ class AdminController extends BaseController
      */
     public function actionOverview($month = null, $year = null, $id = null)
     {
+        // TODO: this should be faster with less database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
 
         $user = null;
@@ -276,6 +277,7 @@ class AdminController extends BaseController
      */
     public function actionVacations($year = null): string
     {
+        // TODO: this should be faster if we reduce database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
         $vacations = [];
         foreach (range(1, 12) as $month) {
@@ -300,13 +302,7 @@ class AdminController extends BaseController
                         ->where($offConditions)->one();
 
                     // get holidays
-                    $holidayDay = Holiday::find()->where(
-                        [
-                            'month' => $month,
-                            'year' => $year,
-                            'day' => $date->format("d"),
-                        ]
-                    )->one();
+                    $holidayDay = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
 
                     // join data
                     $value['off'] = false;

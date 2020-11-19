@@ -12,8 +12,6 @@ use app\models\Off;
 use app\models\OffForm;
 use app\models\Project;
 use app\models\User;
-use DateInterval;
-use DatePeriod;
 use DateTime;
 use DateTimeZone;
 use Exception;
@@ -246,6 +244,7 @@ class ClockController extends BaseController
      */
     public function actionVacations($year = null): string
     {
+        // TODO: this should be faster if we reduce database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
         $vacations = [];
         foreach (range(1, 12) as $month) {
@@ -254,6 +253,7 @@ class ClockController extends BaseController
             foreach (User::find()->all() as $user) {
                 $employee = [];
                 $employee['name'] = $user->name;
+                $employee['id'] = $user->id;
                 foreach ($range as $date) {
                     $today = $date->format("Y-m-d");
                     // get off-time for this day
@@ -271,13 +271,7 @@ class ClockController extends BaseController
                         ->where($offConditions)->one();
 
                     // get holidays
-                    $holidayDay = Holiday::find()->where(
-                        [
-                            'month' => $month,
-                            'year' => $year,
-                            'day' => $date->format("d"),
-                        ]
-                    )->one();
+                    $holidayDay = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
 
                     // join data
                     $value['off'] = false;
