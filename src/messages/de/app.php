@@ -225,7 +225,7 @@ return [
     'Save' => 'Speichern',
     'Select project assigned to this session:' => 'Wähle ein Projekt für diese Sitzung aus:',
     'Selected day overlaps another off-time.' => 'Der gewählte Tag überschneidet sich mit einer anderen Abwesenheit.',
-    'Selected hour overlaps another ended session.' => 'Die gewählte Zeit überschneidet sich mit einer anderen Abwesenheit.',
+    'Selected hour overlaps another ended session.' => 'Die gewählte Zeit überschneidet sich mit einer anderen Sitzung.',
     'Selected month has got only {max} days.' => 'Der gewählte Monat hat nur {max} Tage.',
     'Selected off-time is not approvable.' => 'Die gewählte Abwesenheit ist nicht genehmigungsfähig.',
     'Selected session time overlaps another ended session.' => 'Die gewählte Zeit überschneidet sich mit einer bereits beendeten Sitzung.',

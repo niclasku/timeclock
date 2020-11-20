@@ -26,6 +26,11 @@ use yii\helpers\Url;
 
 $this->title = Yii::t('app', 'Overview');
 
+function formatDuration($t,$f=':') // t = seconds, f = separator
+{
+    return sprintf("%02d%s%02d", floor($t/3600), $f, ($t/60)%60);
+}
+
 function totalWork($day) {
     $sum = 0;
     if (array_key_exists('clock', $day)){
@@ -137,11 +142,11 @@ foreach ($days as $day) {
                 <table class="table">
                     <tr>
                         <td><?= Yii::t('app', 'Working Time') ?>:</td>
-                        <td><?= Yii::$app->formatter->asTime($totalWorked) ?> h</td>
+                        <td><?= formatDuration($totalWorked) ?> h</td>
                     </tr>
                     <tr>
                         <td><?= Yii::t('app', 'Breaks') ?>:</td>
-                        <td><?= Yii::$app->formatter->asTime($totalBreaks) ?> h</td>
+                        <td><?= formatDuration($totalBreaks) ?> h</td>
                     </tr>
                     <tr>
                         <td><?= Yii::t('app', 'Off-time') ?>:</td>
@@ -216,11 +221,11 @@ foreach ($days as $day) {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?= totalWork($day) ? Yii::$app->formatter->asTime(totalWork($day)) . ' h' : '' ?>
+                                <?= totalWork($day) ? formatDuration(totalWork($day)) . ' h' : '' ?>
                             </td>
 
                             <td>
-                                <?= totalBreak($day) ? Yii::$app->formatter->asTime(totalBreak($day)) . ' h' : '' ?>
+                                <?= totalBreak($day) ? formatDuration(totalBreak($day)) . ' h' : '' ?>
                             </td>
                             <td>
                                 <?php $first = true ?>
