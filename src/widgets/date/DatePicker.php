@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\widgets\date;
 
+use app\assets\MomentAsset;
 use Yii;
 use yii\bootstrap4\Html;
 use yii\helpers\Json;
@@ -113,10 +114,11 @@ JS
     public function run(): string
     {
         DatePickerAsset::register($this->view);
+        MomentAsset::register($this->view);
 
         $options = [
             'language' => static::getLanguage(),
-            'dateFormat' => $this->dateFormat,
+            'dateFormat' => strtolower(Yii::$app->formatter->dateFormat),
             'onSelect' => new JsExpression(<<<JS
 function(formattedDate) {
     $("#{$this->options['id']}").val(formattedDate);
@@ -155,8 +157,16 @@ JS
             $js .= ".data(\"datepicker\").selectDate(new Date({$milliseconds}))";
         }
 
+        $js .= '; $("#' . Html::getInputId($this->model, $this->attribute) . '").keyup(function() {
+                    var format = ["' . strtoupper(Yii::$app->formatter->dateFormat) . ' ' . Yii::$app->formatter->timeFormat . '", 
+                                  "' . strtoupper(Yii::$app->formatter->dateFormat) . '"];
+                    var d = moment($("#' . Html::getInputId($this->model, $this->attribute) . '").val(), format, true);
+                    if (d.isValid()) {
+                        $("#' . $this->id .'").data("datepicker").selectDate(new Date(d));
+                    }
+                })';
         $this->view->registerJs($js . ';');
 
-        return $this->renderInputHtml('hidden') . Html::tag('div', '', ['id' => $this->id]);
+        return '<p>' . $this->renderInputHtml('') . '</p>' . Html::tag('div', '', ['id' => $this->id]);
     }
 }
