@@ -185,12 +185,11 @@ class AdminController extends BaseController
         // TODO: this should be faster with less database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
 
-        $user = null;
         if (empty($id)) {
-            $id = 1;
+            $user = User::find()->where(['status' => User::STATUS_ACTIVE])->orderBy(['name' => SORT_ASC])->one();
+        } else {
+            $user = User::find()->where(['id' => $id, 'status' => User::STATUS_ACTIVE])->one();
         }
-
-        $user = User::find()->where(['id' => $id, 'status' => User::STATUS_ACTIVE])->one();
 
         if ($user === null) {
             Yii::$app->alert->danger(Yii::t('app', 'Can not find user of given ID.'));
