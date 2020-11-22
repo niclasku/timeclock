@@ -569,15 +569,14 @@ class AdminController extends BaseController
      * @param string|int|null $year
      * @param string|int|null $id
      * @param string|int|null $week
+     * @param string $started
      * @param string|int $export
      * @return string|Response
-     * @throws RangeNotSatisfiableHttpException
      * @throws InvalidConfigException
      */
-    public function actionHistory($month = null, $year = null, $id = null, $week = null, $export = 0)
+    public function actionHistory($month = null, $year = null, $id = null, $week = null, $started = null, $export = 0)
     {
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
-
         $user = null;
         if (!empty($id)) {
             $user = User::find()->where(['id' => $id, 'status' => User::STATUS_ACTIVE])->one();
@@ -626,8 +625,13 @@ class AdminController extends BaseController
                 ],
             ];
         }
+
         if ($user !== null) {
             $conditions[] = ['user_id' => $user->id];
+        }
+
+        if ($started === 'false') {
+            $conditions[] = ['clock_out' => null];
         }
 
         $clockQuery = Clock::find()
@@ -672,6 +676,7 @@ class AdminController extends BaseController
                 'weeksInMonth' => $weeksInMonth,
                 'weekStart' => $weekStart,
                 'weekEnd' => $weekEnd,
+                'started' => $started,
             ]
         );
     }

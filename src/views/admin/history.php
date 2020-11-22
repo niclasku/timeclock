@@ -27,6 +27,7 @@ use yii\helpers\Url;
  * @var $weekStart int
  * @var $weekEnd int
  * @var $weeksInMonth int
+ * @var $started bool
  */
 
 $this->title = Yii::t('app', 'Sessions');
@@ -248,9 +249,15 @@ JS
                     <?= FA::icon('plus') ?> <?= Yii::t('app', 'Add Session') ?>
                 </a>
             <?php endif; ?>
+            <?php if ($started === null): ?>
+                <a href="<?= Url::to(['history', 'month' => $month, 'year' => $year, 'started' => 'false', 'id' => $employee !== null ? $employee->id : null]) ?>"
+                   class="btn btn-warning btn-sm float-right ml-1">
+                    <?= FA::icon('exclamation') ?> <?= Yii::t('app', 'Not completed') ?>
+                </a>
+            <?php endif; ?>
             <?php if ($week !== null): ?>
                 <a href="<?= Url::to(['history', 'month' => $month, 'year' => $year, 'id' => $employee !== null ? $employee->id : null]) ?>"
-                   class="btn btn-outline-success btn-sm float-right ml-3">
+                   class="btn btn-outline-success btn-sm float-right ml-1">
                     <?= Yii::t('app', 'Month View') ?>
                 </a>
             <?php endif; ?>

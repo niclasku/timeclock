@@ -365,4 +365,5 @@ return [
     'Do you want to delete the current picture?' => 'Möchtest du das aktuelle Bild löschen?',
     'Adding Terminal Data' => 'Terminal Daten hinzufügen',
     'Upload / Keep' => 'Hochladen / Behalten',
+    'Not completed' => 'Nicht beendet',
 ];

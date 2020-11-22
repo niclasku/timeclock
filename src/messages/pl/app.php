@@ -365,4 +365,5 @@ return [
     'Do you want to delete the current picture?' => 'Do you want to delete the current picture?',
     'Adding Terminal Data' => 'Adding Terminal Data',
     'Upload / Keep' => 'Upload / Keep',
+    'Not completed' => 'Nie ukończone',
 ];
