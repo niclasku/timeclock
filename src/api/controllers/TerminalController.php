@@ -77,14 +77,22 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            throw new HttpException(422, $params);
+            throw new HttpException(422, "Parameter validation failed.");
         }
 
         $clock = new Clock();
         $now = Clock::roundToFullMinute((int)Yii::$app->formatter->asTimestamp('now'));
 
-        if (Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->exists()) {
-            throw new HttpException(422, 'User not clocked in');
+        $conditions = [
+            'and',
+            ['clock_out' => null],
+            ['>=', 'clock_in', strtotime('today 00:00')],
+            ['<', 'clock_in', strtotime('+1 day 00:00')],
+            ['user_id' => $params['user_id']],
+        ];
+
+        if (Clock::find()->where($conditions)->exists()) {
+            throw new HttpException(422, 'User not clocked out');
         }
 
         $clock->clock_in = $now;
@@ -92,7 +100,7 @@ class TerminalController extends ActiveController
         $clock->user_id = $params['user_id'];
 
         if (!$clock->validate()) {
-            throw new HttpException(422, $clock->errors);
+            throw new HttpException(422, "Clock validation failed.");
         }
 
         return $clock->save(false);
@@ -110,16 +118,24 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            throw new HttpException(422, $params);
+            throw new HttpException(422, "Parameter validation failed.");
         }
 
-        if (!Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->exists()) {
+        $conditions = [
+            'and',
+            ['clock_out' => null],
+            ['>=', 'clock_in', strtotime('today 00:00')],
+            ['<', 'clock_in', strtotime('+1 day 00:00')],
+            ['user_id' => $params['user_id']],
+        ];
+
+        if (!Clock::find()->where($conditions)->exists()) {
             throw new HttpException(422, 'Could not find running session');
         }
-        $clock = Clock::find()->where(['clock_out' => null, 'user_id' => $params['user_id']])->one();
+        $clock = Clock::find()->where($conditions)->one();
         $clock->clock_out = Clock::roundToFullMinute((int)Yii::$app->formatter->asTimestamp('now'));
         if (!$clock->validate()) {
-            throw new HttpException(422, $clock->errors);
+            throw new HttpException(422, "Clock validation failed.");
         }
         if ($clock->isAnotherSessionSaved()) {
             throw new HttpException(422, 'Can not end current session because it overlaps with another ended session');
@@ -247,7 +263,7 @@ class TerminalController extends ActiveController
             ->addRule(['user_id'], 'exist', ['targetClass' => User::class, 'targetAttribute' => 'id']);
         $params->load(Yii::$app->getRequest()->getBodyParams(), '');
         if (!$params->validate()) {
-            throw new HttpException(422, $params);
+            throw new HttpException(422, "Parameter validation failed.");
         }
 
         $user = User::findOne(['id' => $params['user_id']]);
