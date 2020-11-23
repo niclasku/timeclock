@@ -70,7 +70,7 @@ class OffForm extends Model
         return [
             [['startDate', 'endDate', 'type'], 'required'],
             [['type'], 'in', 'range' => Off::TYPES],
-            [['endDate', 'startDate'], 'date', 'format' => 'yyyy-MM-dd'],
+            [['endDate', 'startDate'], 'date', 'format' => Yii::$app->formatter->dateFormat],
             [['startDate'], 'verifyStart'],
             [['endDate'], 'verifyEnd'],
             [['note'], 'string'],
@@ -85,8 +85,8 @@ class OffForm extends Model
         $conditions = [
             'and',
             ['user_id' => Yii::$app->user->id],
-            ['<=', 'start_at', $this->startDate],
-            ['>=', 'end_at', $this->startDate],
+            ['<=', 'start_at', Yii::$app->formatter->asDate($this->startDate, 'yyyy-MM-dd')],
+            ['>=', 'end_at', Yii::$app->formatter->asDate($this->startDate, 'yyyy-MM-dd')],
         ];
 
         if ($this->_off->id !== null) {
@@ -109,8 +109,8 @@ class OffForm extends Model
             $conditions = [
                 'and',
                 ['user_id' => Yii::$app->user->id],
-                ['<=', 'start_at', $this->endDate],
-                ['>=', 'end_at', $this->startDate],
+                ['<=', 'start_at', Yii::$app->formatter->asDate($this->endDate, 'yyyy-MM-dd')],
+                ['>=', 'end_at', Yii::$app->formatter->asDate($this->startDate, 'yyyy-MM-dd')],
             ];
 
             if ($this->_off->id !== null) {
@@ -154,8 +154,8 @@ class OffForm extends Model
         $originalStart = $this->_off->start_at;
         $originalEnd = $this->_off->end_at;
 
-        $this->_off->start_at = $this->startDate;
-        $this->_off->end_at = $this->endDate;
+        $this->_off->start_at = Yii::$app->formatter->asDate($this->startDate, 'yyyy-MM-dd');
+        $this->_off->end_at = Yii::$app->formatter->asDate($this->endDate, 'yyyy-MM-dd');
         $this->_off->type = (int)$this->type;
         $this->_off->note = $this->note !== '' ? $this->note : null;
 
