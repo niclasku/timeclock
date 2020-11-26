@@ -167,6 +167,7 @@ JS
                 })';
         $this->view->registerJs($js . ';');
 
-        return '<p>' . $this->renderInputHtml('') . '</p>' . Html::tag('div', '', ['id' => $this->id]);
+        return $this->renderInputHtml('') . Html::tag('div', '', ['class' => 'spacer']) .
+            Html::tag('div', '', ['id' => $this->id]);
     }
 }
