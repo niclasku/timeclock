@@ -254,6 +254,11 @@ JS
                    class="btn btn-warning btn-sm float-right ml-1">
                     <?= FA::icon('exclamation') ?> <?= Yii::t('app', 'Not completed') ?>
                 </a>
+            <?php else: ?>
+                <a href="<?= Url::to(['history', 'month' => $month, 'year' => $year, 'id' => $employee !== null ? $employee->id : null]) ?>"
+                   class="btn btn-warning btn-sm float-right ml-1">
+                    <?= FA::icon('exclamation') ?> <?= Yii::t('app', 'Show all') ?>
+                </a>
             <?php endif; ?>
             <?php if ($week !== null): ?>
                 <a href="<?= Url::to(['history', 'month' => $month, 'year' => $year, 'id' => $employee !== null ? $employee->id : null]) ?>"

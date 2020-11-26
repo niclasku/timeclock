@@ -366,4 +366,5 @@ return [
     'Adding Terminal Data' => 'Adding Terminal Data',
     'Upload / Keep' => 'Upload / Keep',
     'Not completed' => 'Nie ukończone',
+    'Show all' => 'Pokaż wszystko',
 ];
