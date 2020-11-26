@@ -126,7 +126,7 @@ class Off extends ActiveRecord implements NoteInterface
             $currentMonth = (int)date('n', $marker);
             if ($currentMonth !== $month) {
                 $month = $currentMonth;
-                $holidays = Holiday::getMonthHolidays($month, (int)date('Y'));
+                $holidays = Holiday::getHolidayDatesMonth($month, (int)date('Y'));
             }
 
             if (!in_array((int)date('j', $marker), $holidays, true)
@@ -156,7 +156,7 @@ class Off extends ActiveRecord implements NoteInterface
             [
                 'and',
                 ['user_id' => $user_id],
-                ['>=', 'end_at', Yii::$app->formatter->asDate('now', 'yyyy-MM-dd')],
+                ['>=', 'end_at', Yii::$app->formatter->asDate('now -6 months', 'yyyy-MM-dd')],
             ]
         );
 

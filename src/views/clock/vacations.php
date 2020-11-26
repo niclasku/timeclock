@@ -3,7 +3,8 @@
 /**
  * @var $this yii\web\View
  * @var $year int
- * @var $vacations array
+ * @var $months array
+ * @var $employees array
  */
 
 use app\models\Clock;
@@ -50,16 +51,16 @@ $this->title = Yii::t('app', 'Vacation');
     </div>
 </div>
 
-<?php foreach ($vacations as $month): ?>
+<?php foreach ($months as $month): ?>
     <div class="row">
         <div class="table-responsive">
             <table class="table table-bordered table-sm table-active">
                 <thead class="thead-light">
                 <tr>
                     <th class="align-text-top" scope="col"
-                        style=""><?= Clock::months()[$month['range']->start->format('n')] ?></th>
+                        style=""><?= Clock::months()[$month->start->format('n')] ?></th>
                     <?php $count = 0 ?>
-                    <?php foreach ($month['range'] as $date): ?>
+                    <?php foreach ($month as $date): ?>
                         <?php $count += 1 ?>
                         <th scope="col" style="width:35px;">
                             <?= $date->format('d') ?>. <br>
@@ -74,27 +75,28 @@ $this->title = Yii::t('app', 'Vacation');
                 </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($month['employees'] as $employee): ?>
+                    <?php foreach ($employees as $name => $days): ?>
                         <tr>
-                            <th scope="row"><?= $employee['name'] ?></th>
-                            <?php foreach ($employee['day'] as $day): ?>
-                                <?php if ($day['holiday']): ?>
-                                    <?php if ($day['holiday'] === 1): ?>
+                            <th scope="row"><?= $name ?></th>
+                            <?php foreach ($month as $day): ?>
+                                <?php $key = $day->format('Y-m-d'); ?>
+                                <?php if ($days[$key]['holiday']): ?>
+                                    <?php if ($days[$key]['holiday'] === 1): ?>
                                         <td class="bg-primary"></td>
                                     <?php else: ?>
                                         <td class="table-primary"></td>
                                     <?php endif; ?>
-                                <?php elseif ($day['off']): ?>
+                                <?php elseif ($days[$key]['off']): ?>
                                     <td
-                                    <?php if ($day['off']->approved === 1): ?>
+                                    <?php if ($days[$key]['off'] === 1): ?>
                                         class="bg-success">
                                     <?php else: ?>
                                         class="table-success">
                                     <?php endif; ?>
-                                        <?php if ($employee['id'] === Yii::$app->user->id &&
+                                        <?php if ($days[$key]['user_id'] === Yii::$app->user->id &&
                                             (Yii::$app->user->identity->role !== User::ROLE_EMPLOYEE ||
                                                 Yii::$app->params['employeeOffTimeDelete'])): ?>
-                                            <a href=<?= Url::to(['clock/off-edit', 'id' => $day['off']->id]) ?> >
+                                            <a href=<?= Url::to(['clock/off-edit', 'id' => $days[$key]['id']]) ?> >
                                                 <div style="height:100%; width:100%"><br></div>
                                             </a>
                                         <?php endif; ?>

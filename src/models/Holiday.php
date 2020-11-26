@@ -71,13 +71,45 @@ class Holiday extends ActiveRecord
      * @param int $year
      * @return array
      */
-    public static function getMonthHolidays(int $month, int $year): array
+    public static function getHolidayDatesMonth(int $month, int $year): array
+    {
+        $holidays = static::getHolidaysMonth($month, $year);
+
+        $days = [];
+        foreach ($holidays as $holiday) {
+            $days[] = $holiday->day;
+        }
+        return $days;
+    }
+
+    /**
+     * @param int $month
+     * @param int $year
+     * @return array
+     */
+    public static function getHolidaysMonth(int $month, int $year): array
     {
         if (!static::isYearPopulated($year)) {
             static::populateYear($year);
         }
+        return static::find()->where(
+            [
+                'month' => $month,
+                'year' => $year,
+            ]
+        )->all();
+    }
 
-        return static::getHolidaysInMonth($month, $year);
+    /**
+     * @param int $year
+     * @return array
+     */
+    public static function getHolidaysYear(int $year): array
+    {
+        if (!static::isYearPopulated($year)) {
+            static::populateYear($year);
+        }
+        return static::find()->where(['year' => $year])->all();
     }
 
     /**
@@ -111,50 +143,5 @@ class Holiday extends ActiveRecord
         } catch (Throwable $exception) {
             Yii::error($exception);
         }
-    }
-
-    /**
-     * @param int $month
-     * @param int $year
-     * @return array
-     */
-    public static function getHolidaysInMonth(int $month, int $year): array
-    {
-        $days = [];
-
-        $holidays = static::find()->where(
-            [
-                'month' => $month,
-                'year' => $year,
-            ]
-        )->all();
-        foreach ($holidays as $holiday) {
-            $days[] = $holiday->day;
-        }
-
-        return $days;
-    }
-
-    /**
-     * @param int $day
-     * @param int $month
-     * @param int $year
-     * @return array
-     */
-    public static function getHolidaysOfDay(int $day, int $month, int $year): array
-    {
-        if (!static::isYearPopulated($year)) {
-            static::populateYear($year);
-        }
-
-        $out = Holiday::find()->where(
-            [
-                'month' => $month,
-                'year' => $year,
-                'day' => $day,
-            ]
-        )->all();
-
-        return $out;
     }
 }

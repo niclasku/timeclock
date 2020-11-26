@@ -75,13 +75,23 @@ class Clock extends ActiveRecord implements NoteInterface
      * @param $month
      * @return DatePeriod
      */
-    public static function getDatePeriod($year, $month)
+    public static function getMonthPeriod($year, $month)
     {
         $begin = new DateTime( $year . '-' . $month .'-01' );
         $end = new DateTime( $year . '-' . $month .'-01' );
         $end = $end->modify( '+1 month' );
         $interval = new DateInterval('P1D');
         return new DatePeriod($begin, $interval, $end);
+    }
+
+    /**
+     * @param $start
+     * @param $end
+     * @return DatePeriod
+     */
+    public static function getDatePeriod($start, $end) {
+        $interval = new DateInterval('P1D');
+        return new DatePeriod(new DateTime($start), $interval, new DateTime($end));
     }
 
     /**

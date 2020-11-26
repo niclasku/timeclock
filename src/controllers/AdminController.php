@@ -13,8 +13,6 @@ use app\models\Off;
 use app\models\Project;
 use app\models\TerminalForm;
 use app\models\User;
-use DateInterval;
-use DatePeriod;
 use DateTime;
 use DateTimeZone;
 use Exception;
@@ -182,7 +180,6 @@ class AdminController extends BaseController
      */
     public function actionOverview($month = null, $year = null, $id = null)
     {
-        // TODO: this should be faster with less database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears($month, $year);
 
         if (empty($id)) {
@@ -195,54 +192,68 @@ class AdminController extends BaseController
             Yii::$app->alert->danger(Yii::t('app', 'Can not find user of given ID.'));
         }
 
-        $range = Clock::getDatePeriod($year, $month);
+        // query database for the whole month
+        $start = Yii::$app->formatter->asDate($year . '-' . $month .'-01', 'yyyy-MM-dd');
+        $end = Yii::$app->formatter->asDate($year . '-' . $month .'-01 +1 month', 'yyyy-MM-dd');
+
+        $off = Off::find()->where(
+            [
+                'and',
+                [
+                    'or',
+                    [
+                        'and',
+                        ['>=', 'start_at', $start],
+                        ['<=', 'start_at', $end],
+                    ],
+                    [
+                        'and',
+                        ['>=', 'end_at', $start],
+                        ['<=', 'end_at', $end],
+                    ],
+                    [
+                        'and',
+                        ['<=', 'start_at', $start],
+                        ['>=', 'end_at', $end],
+                    ],
+                ],
+                ['user_id' => $user->id],
+            ])
+            ->all();
+        $clock = Clock::find()->where(
+            [
+                'and',
+                ['<', 'clock_out', (int)Yii::$app->formatter->asTimestamp($end . ' 00:00:00')],
+                ['>=', 'clock_in', (int)Yii::$app->formatter->asTimestamp($start . ' 00:00:00')],
+                ['user_id' => $user->id],
+            ])
+            ->orderBy(['clock_in' => SORT_ASC])->all();
+        $holiday = Holiday::getHolidaysMonth($month, $year);
+
+        // build array
         $days = [];
-        foreach($range as $date){
-            $today = $date->format("Y-m-d");
-            $tomorrow = (clone $date)->modify('+1 day')->format("Y-m-d");
+        $range = Clock::getDatePeriod($start, $end);
+        foreach ($range as $date) {
+            $days[Yii::$app->formatter->asDate($date, 'yyyy-MM-dd')]['date'] = $date;
+        }
+        foreach ($off as $offPeriod) {
+            $first = Yii::$app->formatter->asTimestamp($offPeriod->start_at) > Yii::$app->formatter->asTimestamp($start) ?
+                $offPeriod->start_at : $start;
 
-            // get off-time for this day
-            $offConditions = [
-                'and',
-                ['>=', 'end_at', $today],
-                ['<=', 'start_at', $today],
-                ['user_id' => $user->id],
-            ];
-            $offDay = Off::find()
-                ->joinWith(['user' => static function (ActiveQuery $query) {
-                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
-                }], false)
-                ->where($offConditions)->all();
+            $last = Yii::$app->formatter->asTimestamp($offPeriod->end_at) < Yii::$app->formatter->asTimestamp($end) ?
+                Yii::$app->formatter->asDate($offPeriod->end_at . ' +1 day', 'yyyy-MM-dd') : $end;
 
-            // get clock in/out for this day
-            $clockConditions = [
-                'and',
-                ['<', 'clock_out', (int)Yii::$app->formatter->asTimestamp($tomorrow. ' 00:00:00')],
-                ['>=', 'clock_in', (int)Yii::$app->formatter->asTimestamp($today. ' 00:00:00')],
-                ['user_id' => $user->id],
-            ];
-            $clockDay = Clock::find()
-                ->joinWith(['user' => static function (ActiveQuery $query) {
-                    $query->andWhere(['status' => User::STATUS_ACTIVE]);
-                }], false)
-                ->where($clockConditions)->orderBy(['clock_in' => SORT_ASC])->all();
-
-            // get holidays
-            $holidays = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
-
-            // join data
-            $value = [];
-            $value['date'] = $date;
-            foreach ($offDay as $item) {
-                $value['off'][] = $item;
+            $period = Clock::getDatePeriod($first, $last);
+            foreach ($period as $date) {
+                $days[Yii::$app->formatter->asDate($date, 'yyyy-MM-dd')]['off'][] = $offPeriod;
             }
-            foreach ($clockDay as $item) {
-                $value['clock'][] = $item;
-            }
-            foreach ($holidays as $item) {
-                $value['holiday'][] = $item;
-            }
-            $days[] = $value;
+        }
+        foreach ($clock as $clockDay) {
+            $days[Yii::$app->formatter->asDate($clockDay->clock_in, 'yyyy-MM-dd')]['clock'][] = $clockDay;
+        }
+        foreach ($holiday as $item) {
+            $date = Yii::$app->formatter->asDate($item->year . '-' . $item->month . '-' . $item->day, 'yyyy-MM-dd');
+            $days[$date]['holiday'][] = $item;
         }
 
         $users = User::find()
@@ -276,56 +287,82 @@ class AdminController extends BaseController
      */
     public function actionVacations($year = null): string
     {
-        // TODO: this should be faster if we reduce database queries
         [$month, $year, $previousMonth, $previousYear, $nextMonth, $nextYear] = $this->getMonthsAndYears(null, $year);
-        $vacations = [];
+
+        $months = [];
         foreach (range(1, 12) as $month) {
-            $range = Clock::getDatePeriod($year, $month);
-            $employees = [];
-            foreach (User::find()->all() as $user) {
-                $employee = [];
-                $employee['name'] = $user->name;
-                foreach ($range as $date) {
-                    $today = $date->format("Y-m-d");
-                    // get off-time for this day
-                    $offConditions = [
-                        'and',
-                        ['>=', 'end_at', $today],
-                        ['<=', 'start_at', $today],
-                        ['user_id' => $user->id],
-                    ];
-                    $offDay = Off::find()
-                        ->joinWith(['user' => static function (ActiveQuery $query) {
-                            $query->andWhere(['status' => User::STATUS_ACTIVE]);
-                        }], false)
-                        ->where($offConditions)->one();
+            $range = Clock::getMonthPeriod($year, $month);
+            $months[] = $range;
+        }
 
-                    // get holidays
-                    $holidayDay = Holiday::getHolidaysOfDay((int)$date->format("d"), $month, $year);
+        $employees = [];
+        $start = $year . '-01-01';
+        $end = $year . '-12-31';
 
-                    // join data
-                    $value['off'] = false;
-                    $value['holiday'] = false;
-                    if ($offDay) {
-                        $value['off'] = $offDay;
-                    }
-                    if ($holidayDay) {
-                        $value['holiday'] = 1;
-                    }
-                    if (in_array((int)$date->format('N'), Yii::$app->params['weekendDays'])) {
-                        $value['holiday'] = 2;
-                    }
-                    $employee['day'][] = $value;
+        $users = User::find()
+            ->where(['status' => User::STATUS_ACTIVE])
+            ->indexBy('id')
+            ->orderBy(['name' => SORT_ASC])
+            ->all();
+
+        $range = Clock::getDatePeriod($start, Yii::$app->formatter->asDate($end . ' +1 day', 'yyyy-MM-dd'));
+
+        $holiday = Holiday::getHolidaysYear($year);
+        foreach ($users as $user) {
+            foreach ($range as $day) {
+                $date = Yii::$app->formatter->asDate($day, 'yyyy-MM-dd');
+                $employees[$user->name][$date]['off'] = false;
+                $employees[$user->name][$date]['holiday'] = false;
+                if (in_array((int)$day->format('N'), Yii::$app->params['weekendDays'])) {
+                    $employees[$user->name][$date]['holiday'] = 2;
                 }
-                $employees[] = $employee;
             }
-            $vacations[] = ['range' => $range, 'employees' => $employees];
+            foreach ($holiday as $item) {
+                $date = Yii::$app->formatter->asDate($item->year . '-' . $item->month . '-' . $item->day, 'yyyy-MM-dd');
+                $employees[$user->name][$date]['holiday'] = 1;
+            }
+        }
+
+        $off = Off::find()->where(
+            [
+                'or',
+                [
+                    'and',
+                    ['>=', 'start_at', $start],
+                    ['<=', 'start_at', $end],
+                ],
+                [
+                    'and',
+                    ['>=', 'end_at', $start],
+                    ['<=', 'end_at', $end],
+                ],
+                [
+                    'and',
+                    ['<=', 'start_at', $start],
+                    ['>=', 'end_at', $end],
+                ],
+            ])
+            ->all();
+
+        foreach ($off as $offPeriod) {
+            $first = Yii::$app->formatter->asTimestamp($offPeriod->start_at) > Yii::$app->formatter->asTimestamp($start) ?
+                $offPeriod->start_at : $start;
+
+            $last = Yii::$app->formatter->asTimestamp($offPeriod->end_at) < Yii::$app->formatter->asTimestamp($end) ?
+                Yii::$app->formatter->asDate($offPeriod->end_at . ' +1 day', 'yyyy-MM-dd') : $end;
+
+            $period = Clock::getDatePeriod($first, $last);
+            foreach($period as $day) {
+                $date = Yii::$app->formatter->asDate($day, 'yyyy-MM-dd');
+                $employees[$offPeriod->user->name][$date]['off'] = $offPeriod;
+            }
         }
 
         return $this->render(
             'vacations',
             [
-                'vacations' => $vacations,
+                'employees' => $employees,
+                'months' => $months,
                 'year' => $year,
             ]
         );
@@ -804,7 +841,7 @@ class AdminController extends BaseController
                 'daysInMonth' => $daysInMonth,
                 'employee' => $user,
                 'users' => $users,
-                'holidays' => Holiday::getMonthHolidays($month, $year),
+                'holidays' => Holiday::getHolidayDatesMonth($month, $year),
                 'entries' => $entries,
             ]
         );
@@ -1559,7 +1596,7 @@ class AdminController extends BaseController
             [
                 'off' => $off,
                 'model' => $model,
-                'marked' => Off::getFutureOffDays($off->id),
+                'marked' => Off::getFutureOffDays($off->id, $off->user_id),
             ]
         );
     }

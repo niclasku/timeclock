@@ -3,7 +3,8 @@
 /**
  * @var $this yii\web\View
  * @var $year int
- * @var $vacations array
+ * @var $months array
+ * @var $employees array
  */
 
 use app\models\Clock;
@@ -64,16 +65,16 @@ $this->title = Yii::t('app', 'Vacation');
             <?php endif; ?>
         </div>
     </div>
-<?php foreach ($vacations as $month): ?>
+<?php foreach ($months as $month): ?>
     <div class="row">
         <div class="table-responsive">
             <table class="table table-bordered table-sm table-active">
                 <thead class="thead-light">
                 <tr>
                     <th class="align-text-top" scope="col"
-                        style=""><?= Clock::months()[$month['range']->start->format('n')] ?></th>
+                        style=""><?= Clock::months()[$month->start->format('n')] ?></th>
                     <?php $count = 0 ?>
-                    <?php foreach ($month['range'] as $date): ?>
+                    <?php foreach ($month as $date): ?>
                         <?php $count += 1 ?>
                         <th scope="col" style="width:35px;">
                             <?= $date->format('d') ?>. <br>
@@ -88,39 +89,40 @@ $this->title = Yii::t('app', 'Vacation');
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($month['employees'] as $employee): ?>
+                <?php foreach ($employees as $name => $days): ?>
                     <tr>
-                        <th scope="row"><?= $employee['name'] ?></th>
-                        <?php foreach ($employee['day'] as $day): ?>
-                            <?php if ($day['holiday']): ?>
-                                <?php if ($day['holiday'] === 1): ?>
+                        <th scope="row"><?= $name ?></th>
+                        <?php foreach ($month as $day): ?>
+                            <?php $key = $day->format('Y-m-d'); ?>
+                            <?php if ($days[$key]['holiday']): ?>
+                                <?php if ($days[$key]['holiday'] === 1): ?>
                                     <td class="bg-primary"></td>
                                 <?php else: ?>
                                     <td class="table-primary"></td>
                                 <?php endif; ?>
-                            <?php elseif ($day['off'] !== false): ?>
+                            <?php elseif ($days[$key]['off'] !== false): ?>
                                 <td
-                                <?php if ($day['off']->type === Off::TYPE_VACATION): ?>
-                                    <?php if ($day['off']->approved === 1): ?>
+                                <?php if ($days[$key]['off']->type === Off::TYPE_VACATION): ?>
+                                    <?php if ($days[$key]['off']->approved === 1): ?>
                                          class="bg-success">
                                     <?php else: ?>
                                         class="table-success">
                                     <?php endif; ?>
-                                <?php elseif ($day['off']->type === Off::TYPE_SICK): ?>
-                                    <?php if ($day['off']->approved === 1): ?>
+                                <?php elseif ($days[$key]['off']->type === Off::TYPE_SICK): ?>
+                                    <?php if ($days[$key]['off']->approved === 1): ?>
                                         class="bg-danger">
                                     <?php else: ?>
                                         class="table-danger">
                                     <?php endif; ?>
-                                <?php elseif ($day['off']->type === Off::TYPE_SHORT): ?>
-                                    <?php if ($day['off']->approved === 1): ?>
+                                <?php elseif ($days[$key]['off']->type === Off::TYPE_SHORT): ?>
+                                    <?php if ($days[$key]['off']->approved === 1): ?>
                                         class="bg-warning">
                                     <?php else: ?>
                                         class="table-warning">
                                     <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if (Yii::$app->params['adminSessionEdit']): ?>
-                                    <a href=<?= Url::to(['admin/off-edit', 'id' => $day['off']->id, 'user_id' => $day['off']->user_id]) ?> >
+                                    <a href=<?= Url::to(['admin/off-edit', 'id' => $days[$key]['off']->id, 'user_id' => $days[$key]['off']->user_id]) ?> >
                                         <div style="height:100%; width:100%"><br></div>
                                     </a>
                                 <?php endif; ?>
