@@ -117,21 +117,21 @@ html, body { height:100% }
   .calendar p { display:inline }
 }
 
-@media (min-width: 1700px) {
+@media (min-width: 1400px) {
   .container {
-    max-width: 1600px !important;
+    max-width: 1300px;
   }
 }
 
 @media (min-width: 1600px) {
   .container {
-    max-width: 1400px !important;
+    max-width: 1400px;
   }
 }
 
-@media (min-width: 1400px) {
+@media (min-width: 1700px) {
   .container {
-    max-width: 1300px;
+    max-width: 1600px;
   }
 }
 
